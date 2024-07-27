@@ -3,6 +3,7 @@
 #include "i2s_audio.h"
 #include "uart_midi.h"
 #include "keyboard.h"
+#include "my_adc.h"
 
 class TestGen {
 public:
@@ -146,6 +147,24 @@ static void MKCallback(int row, int col, MKKeyStateEnum state) {
     }
 }
 
+static void AdcTask(void*) {
+    SimpleAdcInit(ADC_UNIT_1, ADC_CHANNEL_3);
+    SimpleAdcInit(ADC_UNIT_1, ADC_CHANNEL_4);
+    SimpleAdcInit(ADC_UNIT_1, ADC_CHANNEL_5);
+    SimpleAdcInit(ADC_UNIT_1, ADC_CHANNEL_6);
+
+    float vals[4] {};
+    for (;;) {
+        vals[0] = SimpleAdcReadFloat(ADC_UNIT_1, ADC_CHANNEL_3);
+        vals[1] = SimpleAdcReadFloat(ADC_UNIT_1, ADC_CHANNEL_4);
+        vals[2] = SimpleAdcReadFloat(ADC_UNIT_1, ADC_CHANNEL_5);
+        vals[3] = SimpleAdcReadFloat(ADC_UNIT_1, ADC_CHANNEL_6);
+        ESP_LOGI("adc", "%f %f %f %f", vals[0], vals[1], vals[2], vals[3]);
+
+        vTaskDelay(pdMS_TO_TICKS(100));
+    }
+}
+
 extern "C" void app_main(void) {
     // rp303proc.Init();
 
@@ -176,7 +195,7 @@ extern "C" void app_main(void) {
     };
     UartMidi_Init(&midi_config);
 
-    static const int row_gpio[] = {4, 5, 6, 7};
+    static const int row_gpio[] = {8, 3, 18, 9};
     static const int col_gpio[] = {10, 11, 12, 13};
 
     MatrixKeyboardConfigT matrix_config = {
@@ -187,4 +206,6 @@ extern "C" void app_main(void) {
         .col_count = 4
     };
     MatrixKeyboard_Init(&matrix_config);
+
+    xTaskCreate(AdcTask, "AdcTask", 4096, NULL, 5, NULL);
 }
