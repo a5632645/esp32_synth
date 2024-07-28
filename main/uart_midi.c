@@ -79,15 +79,14 @@ static void UartMidiProcessStream(uint8_t* buffer, size_t size) {
 
 static void UartTask(void *arg)
 {
-    uint8_t* buffer = malloc(16 * sizeof(uint8_t));
+    uint8_t buffer[64] = {0};
     for (;;)
     {
-        int buffered_size = uart_read_bytes(uartmidi_port, buffer, 15, pdMS_TO_TICKS(20));
+        int buffered_size = uart_read_bytes(uartmidi_port, buffer, 64, pdMS_TO_TICKS(20));
         if(buffered_size > 0) {
             UartMidiProcessStream(buffer, buffered_size);
         } 
     }
-    free(buffer);
     vTaskDelete(NULL);
 }
 

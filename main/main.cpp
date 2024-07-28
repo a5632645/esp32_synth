@@ -1,9 +1,12 @@
 #include <cmath>
+#include <array>
 #include <esp_log.h>
 #include "i2s_audio.h"
 #include "uart_midi.h"
 #include "keyboard.h"
 #include "my_adc.h"
+#include "lcd.h"
+#include "gui/main_window.h"
 
 class TestGen {
 public:
@@ -84,6 +87,9 @@ private:
 
 static PolyGen poly_gen;
 
+// ================================================================================
+// audio
+// ================================================================================
 static void AudioCallback(float* buffer, int len) {
     // for (int i = 0; i < len; i++) {
     //     buffer[i] = rand() * 2.0f / RAND_MAX - 1.0f;
@@ -91,6 +97,9 @@ static void AudioCallback(float* buffer, int len) {
     poly_gen.Process(buffer, len);
 }
 
+// ================================================================================
+// midi
+// ================================================================================
 static void UartMidiCallback(uint8_t* buffer, int len) {
     uint8_t head = buffer[0] >> 4;
     if (head == 9) {
@@ -105,6 +114,9 @@ static void UartMidiCallback(uint8_t* buffer, int len) {
     }
 }
 
+// ================================================================================
+// keyboard
+// ================================================================================
 static void MKCallback(int row, int col, MKKeyStateEnum state) {
     static constexpr int kRemapTable[4][4] {
         { 0, 1, 2, 3 },
@@ -114,7 +126,7 @@ static void MKCallback(int row, int col, MKKeyStateEnum state) {
     };
     static int octave = 4;
 
-    if(int i = kRemapTable[row][col]; i < 13) {
+    if(int i = kRemapTable[row][col]; i < 12) {
         auto note = octave * 12 + i;
         if(state == MKKeyStateEnum::MK_KEY_DOWN) {
             poly_gen.NoteOn(note, 1.0f);
@@ -132,13 +144,13 @@ static void MKCallback(int row, int col, MKKeyStateEnum state) {
         case 12:
             break;
         case 13:
-            octave = std::max(octave + 1, 8);
+            octave = std::min(octave + 1, 8);
             ESP_LOGI("midi", "octave up %d", octave);
             break;
         case 14:
             break;
         case 15:
-            octave = std::min(octave - 1, -2);
+            octave = std::max(octave - 1, -2);
             ESP_LOGI("midi", "octave down %d", octave);
             break;
         default:
@@ -147,39 +159,79 @@ static void MKCallback(int row, int col, MKKeyStateEnum state) {
     }
 }
 
+// ================================================================================
+// adc
+// ================================================================================
 static void AdcTask(void*) {
     SimpleAdcInit(ADC_UNIT_1, ADC_CHANNEL_3);
     SimpleAdcInit(ADC_UNIT_1, ADC_CHANNEL_4);
     SimpleAdcInit(ADC_UNIT_1, ADC_CHANNEL_5);
     SimpleAdcInit(ADC_UNIT_1, ADC_CHANNEL_6);
 
-    float vals[4] {};
     for (;;) {
-        vals[0] = SimpleAdcReadFloat(ADC_UNIT_1, ADC_CHANNEL_3);
-        vals[1] = SimpleAdcReadFloat(ADC_UNIT_1, ADC_CHANNEL_4);
-        vals[2] = SimpleAdcReadFloat(ADC_UNIT_1, ADC_CHANNEL_5);
-        vals[3] = SimpleAdcReadFloat(ADC_UNIT_1, ADC_CHANNEL_6);
-        ESP_LOGI("adc", "%f %f %f %f", vals[0], vals[1], vals[2], vals[3]);
-
         vTaskDelay(pdMS_TO_TICKS(100));
     }
+    vTaskDelete(nullptr);
 }
 
+// ================================================================================
+// lcd
+// ================================================================================
+class Component1 : public Component {
+public:
+    void PaintSelf(Graphic& g) override {
+        auto b = GetLocalBound();
+        g.DrawLine(rand() % b.w_, rand() % b.h_, rand() % b.w_, rand() % b.h_);
+    }
+    void Resized() override {
+    }
+};
+
+class Component2 : public Component {
+public:
+    void PaintSelf(Graphic& g) override {
+        auto b = GetLocalBound();
+        g.FillRect(rand() % b.w_, rand() % b.h_, rand() % b.w_, rand() % b.h_);
+    }
+    void Resized() override {
+    }
+};
+
+static void LcdTask(void*) {
+    ST7735_t dev;
+    spi_master_init(&dev, 2, 1, 41, 40, 42);
+    lcdInit(&dev, 128, 160, 0, 0);
+    lcdDisplayOn(&dev);
+    alignas(32) static uint16_t screen_buffer[128][160] = {};
+    MainWindow w {128, 160};
+    LLContext context {screen_buffer};
+
+    Component1 c1;
+    c1.SetBound(Bound{0,0,20,20});
+    Component2 c2;
+    c2.SetBound(Bound{40,40,20,20});
+    w.AddChild(&c1);
+    w.AddChild(&c2);
+    for (;;) {
+        Graphic g{w.GetLocalBound(), context};
+        w.PaintAll(g);
+        LcdDrawScreen(&dev, (uint16_t*)screen_buffer, 0, 0, 128, 160);
+        vTaskDelay(pdMS_TO_TICKS(100));
+    }
+    vTaskDelete(nullptr);
+}
+
+// ================================================================================
+// app
+// ================================================================================
 extern "C" void app_main(void) {
-    // rp303proc.Init();
-
-    // for (int i = 0; i < 400; ++i) {
-    //     rp303proc.UpdataADC();
-    //     vTaskDelay(1);
-    // }
-
     I2sAudioConfigT i2s_config {
         .callback = AudioCallback,
         .i2s_port = I2S_NUM_0,
         .sample_rate = 48000,
-        .bck_gpio = 40,
-        .ws_gpio = 41,
-        .out_gpio = 42,
+        .bck_gpio = 16,
+        .ws_gpio = 15,
+        .out_gpio = 17,
         .channel_count = I2S_SLOT_MODE_MONO
     };
     poly_gen.Init(static_cast<float>(i2s_config.sample_rate));
@@ -195,8 +247,8 @@ extern "C" void app_main(void) {
     };
     UartMidi_Init(&midi_config);
 
-    static const int row_gpio[] = {8, 3, 18, 9};
-    static const int col_gpio[] = {10, 11, 12, 13};
+    static const int row_gpio[] = {46, 3, 8, 18};
+    static const int col_gpio[] = {9, 10, 11, 12};
 
     MatrixKeyboardConfigT matrix_config = {
         .callback = MKCallback,
@@ -208,4 +260,5 @@ extern "C" void app_main(void) {
     MatrixKeyboard_Init(&matrix_config);
 
     xTaskCreate(AdcTask, "AdcTask", 4096, NULL, 5, NULL);
+    xTaskCreate(LcdTask, "LcdTask", 4096, NULL, 5, NULL);
 }

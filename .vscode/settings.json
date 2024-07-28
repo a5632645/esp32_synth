@@ -27,7 +27,17 @@
         "i2s_types.h": "c",
         "stddef.h": "c",
         "i2s_audio.h": "c",
-        "dedic_gpio.h": "c"
+        "dedic_gpio.h": "c",
+        "inttypes.h": "c",
+        "spi_master.h": "c",
+        "array": "c",
+        "bitset": "c",
+        "string_view": "c",
+        "format": "c",
+        "initializer_list": "c",
+        "span": "c",
+        "regex": "c",
+        "algorithm": "cpp"
     },
     "idf.flashType": "UART",
     "idf.gitPathWin": "c:\\Users\\Kawai\\esp\\esp-idf-v5.3-rc1\\tools\\tools\\idf-git\\2.39.2\\cmd\\git.exe"
