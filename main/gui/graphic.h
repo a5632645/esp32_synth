@@ -57,7 +57,7 @@ public:
 
     void DrawHorizenLine(int x, int y, int w) {
         y += clip_bound_.y_;
-        if (y < 0 || y >= clip_bound_.h_)
+        if (y < clip_bound_.Top() || y >= clip_bound_.h_)
             return;
         x += clip_bound_.x_;
         x = std::max(0, x);
@@ -67,7 +67,7 @@ public:
     
     void DrawVeticalLine(int x, int y, int h) {
         x += clip_bound_.x_;
-        if (x < 0 || x >= clip_bound_.w_)
+        if (x < clip_bound_.Left() || x >= clip_bound_.w_)
             return;
         y += clip_bound_.y_;
         y = std::max(0, y);

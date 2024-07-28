@@ -14,6 +14,7 @@ public:
     void FillColorHorizenLine(int y, int x, int w, Color c);
     void FillColorVeticalLine(int x, int y, int h, Color c);
     void FillColorRect(int x, int y, int w, int h, Color c);
+    void FlushScreen(int x, int y, int w, int h);
 private:
     void* context_ = nullptr;
 };

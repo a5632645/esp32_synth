@@ -50,6 +50,7 @@ void lcdDrawFillRect(ST7735_t * dev, uint16_t x1, uint16_t y1, uint16_t x2, uint
 void lcdDisplayOff(ST7735_t * dev);
 void lcdDisplayOn(ST7735_t * dev);
 void LcdDrawScreen(ST7735_t* dev, uint16_t* colors, int x, int y, int w, int h);
+void LcdSetSendMode(ST7735_t * dev, int mode);
 void lcdFillScreen(ST7735_t * dev, uint16_t color);
 void lcdDrawLine(ST7735_t * dev, uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t color);
 void lcdDrawRect(ST7735_t * dev, uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t color);

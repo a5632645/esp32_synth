@@ -89,6 +89,10 @@ bool spi_master_write_byte(spi_device_handle_t SPIHandle, const uint8_t* Data, s
 	return true;
 }
 
+void LcdSetSendMode(ST7735_t * dev, int mode) {
+    gpio_set_level( dev->_dc, mode );
+}
+
 bool spi_master_write_command(ST7735_t * dev, uint8_t cmd)
 {
 	uint8_t Byte = 0;

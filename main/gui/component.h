@@ -6,6 +6,7 @@
 
 #include <vector>
 #include <algorithm>
+#include <string.h>
 #include "graphic.h"
 #include "msg_queue.h"
 #include "ll_context.h"
@@ -93,13 +94,20 @@ private:
     void InternalRepaint(Bound repaint_bound) {
         if (parent_ == nullptr) {
             if(context_ != nullptr) {
-                MsgQueue::GetInstance().Push(MsgQueue::Message{
-                        .command = cmds::kPaint,
-                        .handler = [this, repaint_bound, bb = bound_parent_, c = context_]() {
-                            Graphic g{bb, *c};
-                            this->InternalPaint(g, repaint_bound);
-                        }
-                    });
+                MsgQueue::Message msg{
+                    .command = cmds::kPaint,
+                    .handler = [this, repaint_bound, bb = bound_parent_, c = context_](void* data) {
+                        Graphic g{bb, *c};
+                        this->InternalPaint(g, repaint_bound);
+                        bool flush_screen = true;
+                        memcpy(data, &flush_screen, sizeof(flush_screen));
+                        if (flush_screen)
+                            c->FlushScreen(repaint_bound.x_, repaint_bound.y_, repaint_bound.w_, repaint_bound.h_);
+                    }
+                };
+                bool flush_screen = true;
+                memcpy(msg.data.data(), &flush_screen, sizeof(flush_screen));
+                MsgQueue::GetInstance().Push(std::move(msg));
             }
         }
         else {

@@ -12,6 +12,7 @@
 #include "gui/msg_queue.h"
 #include "gui/timer_task.h"
 #include "gui/timer_queue.h"
+#include "st7735_ll_contex.h"
 
 class TestGen {
 public:
@@ -206,7 +207,7 @@ public:
 class Component2 : public Component, public TimerTask {
 public:
     Component2() {
-        StartTimerHz(5.0f);
+        StartTimerHz(30.0f);
     }
 
     void TimerCallback() override {
@@ -278,12 +279,11 @@ static void MyQueueNotify(void* arg) {
 
 static void MyLcdTask(void*) {
     // ll init
-    ST7735_t dev;
-    spi_master_init(&dev, 2, 1, 41, 40, 42);
-    lcdInit(&dev, 128, 160, 0, 0);
-    lcdDisplayOn(&dev);
-    alignas(32) static uint16_t screen_buffer[128][160] = {};
-    LLContext context {screen_buffer};
+    static St7735LLContext ll_context;
+    spi_master_init(&ll_context.dev, 2, 1, 41, 40, 42);
+    lcdInit(&ll_context.dev, 128, 160, 0, 0);
+    lcdDisplayOn(&ll_context.dev);
+    LLContext context {&ll_context};
 
     // msg queue init
     SemaphoreHandle_t queue_sema = xSemaphoreCreateBinary();
@@ -303,15 +303,7 @@ static void MyLcdTask(void*) {
 
     auto& mq = MsgQueue::GetInstance();
     for (;;) {
-        auto msg = mq.Pop();
-        if (msg.command == cmds::kPaint) {
-            msg.handler();
-            LcdDrawScreen(&dev, (uint16_t*)screen_buffer, 0, 0, 128, 160);
-        }
-        else {  
-            msg.handler();
-        }
-        // vTaskDelay(pdMS_TO_TICKS(100));
+        mq.Loop();
     }
     vTaskDelete(nullptr);
 }
