@@ -7,9 +7,13 @@
 #include <vector>
 #include <algorithm>
 #include "graphic.h"
+#include "msg_queue.h"
+#include "ll_context.h"
 
 class Component {
 public:
+    Component(LLContext* context = nullptr) : context_(context) {}
+
     virtual void PaintSelf(Graphic& g) = 0;
     virtual void Resized() = 0;
     
@@ -17,13 +21,15 @@ public:
      * @brief get local bound
      * @return local bound
      */
-    Bound GetLocalBound() { return local_bound_; }
+    Bound GetLocalBound() {
+         return Bound{0, 0, bound_parent_.w_, bound_parent_.h_};
+    }
 
     /**
      * @brief get bound in top level parent
      * @return bound
      */
-    Bound GetBound() { return bound_; }
+    Bound GetBoundTopParent() { return bound_top_parent_; }
 
     void AddChild(Component* child) {
         child->parent_ = this;
@@ -35,23 +41,28 @@ public:
         child->SetBound(child->GetLocalBound());
         children_.erase(std::remove(children_.begin(), children_.end(), child), children_.end());
     }
+
+    void SetBound(int x, int y, int w, int h) {
+        SetBound(Bound{x, y, w, h});
+    }
+
     void SetBound(Bound bound) {
-        local_bound_ = bound;
+        bound_parent_ = bound;
         if(parent_ == nullptr) {
-            bound_ = bound;
+            bound_top_parent_ = bound;
         }
         else {
-            auto parent_bound = parent_->GetBound();
+            auto parent_bound = parent_->GetBoundTopParent();
             parent_bound.Shifted(bound.x_, bound.y_);
             parent_bound.w_ = bound.w_;
             parent_bound.h_ = bound.h_;
-            bound_ = parent_bound;
+            bound_top_parent_ = parent_bound;
         }
         Resized();
     }
 
     void PaintAll(Graphic& g) {
-        g.SetTargetBound(bound_);
+        g.SetClipBound(bound_top_parent_);
         PaintSelf(g);
         for (auto* child : children_)
             child->PaintAll(g);
@@ -63,9 +74,54 @@ public:
             child->SetBound(child->GetLocalBound());
         }
     }
+
+    void Repaint(Bound bound) {
+        auto b = bound_top_parent_.Shift(bound.x_, bound.y_);
+        b.w_ = bound.w_;
+        b.h_ = bound.h_;
+
+        if (parent_ != nullptr)
+            parent_->InternalRepaint(b);
+        else
+            InternalRepaint(b);
+    }
+
+    void Repaint() {
+        Repaint(GetLocalBound());
+    }
 private:
+    void InternalRepaint(Bound repaint_bound) {
+        if (parent_ == nullptr) {
+            if(context_ != nullptr) {
+                MsgQueue::GetInstance().Push(MsgQueue::Message{
+                        .command = cmds::kPaint,
+                        .handler = [this, repaint_bound, bb = bound_parent_, c = context_]() {
+                            Graphic g{bb, *c};
+                            this->InternalPaint(g, repaint_bound);
+                        }
+                    });
+            }
+        }
+        else {
+            parent_->InternalRepaint(repaint_bound);
+        }
+    }
+
+    void InternalPaint(Graphic& g, Bound repaint_bound) {
+        auto intersection = bound_top_parent_.GetIntersection(repaint_bound);
+        if(intersection.w_ == 0 || intersection.h_ == 0)
+            return;
+
+        g.SetClipBound(intersection);
+        g.SetComponentBound(bound_top_parent_);
+        PaintSelf(g);
+        for (auto* child : children_)
+            child->InternalPaint(g, repaint_bound);
+    }
+
     std::vector<Component*> children_;
-    Component* parent_{};
-    Bound local_bound_;
-    Bound bound_;
+    LLContext* context_ = nullptr;
+    Component* parent_ = nullptr;
+    Bound bound_parent_;     // bound in parent
+    Bound bound_top_parent_; // bound in top level parent
 };

@@ -1,12 +1,17 @@
 #include <cmath>
 #include <array>
 #include <esp_log.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
 #include "i2s_audio.h"
 #include "uart_midi.h"
 #include "keyboard.h"
 #include "my_adc.h"
 #include "lcd.h"
-#include "gui/main_window.h"
+#include "gui/component.h"
+#include "gui/msg_queue.h"
+#include "gui/timer_task.h"
+#include "gui/timer_queue.h"
 
 class TestGen {
 public:
@@ -177,46 +182,147 @@ static void AdcTask(void*) {
 // ================================================================================
 // lcd
 // ================================================================================
-class Component1 : public Component {
+class Component1 : public Component, public TimerTask {
 public:
+    Component1() {
+        StartTimerHz(10.0f);
+    }
+
+    void TimerCallback() override {
+        Repaint(GetLocalBound());
+    }
+
     void PaintSelf(Graphic& g) override {
         auto b = GetLocalBound();
+        g.Fill(colors::kGreen);
+        g.SetColor(colors::kWhite);
         g.DrawLine(rand() % b.w_, rand() % b.h_, rand() % b.w_, rand() % b.h_);
+        g.DrawRect(GetLocalBound());
     }
     void Resized() override {
     }
 };
 
-class Component2 : public Component {
+class Component2 : public Component, public TimerTask {
 public:
+    Component2() {
+        StartTimerHz(5.0f);
+    }
+
+    void TimerCallback() override {
+        Repaint(GetLocalBound());
+    }
+
     void PaintSelf(Graphic& g) override {
         auto b = GetLocalBound();
+        g.Fill(colors::kBlack);
+        g.SetColor(colors::kWhite);
         g.FillRect(rand() % b.w_, rand() % b.h_, rand() % b.w_, rand() % b.h_);
+        g.SetColor(colors::kRed);
+        g.DrawRect(GetLocalBound());
     }
     void Resized() override {
     }
 };
 
-static void LcdTask(void*) {
+class MainComponent : public Component, public TimerTask {
+public:
+    MainComponent(LLContext* ctx)
+        : Component(ctx) {
+        AddChild(&c1);
+        AddChild(&c2);
+        StartTimerHz(1.0f);
+    }
+
+    void TimerCallback() override {
+        slice = (slice + 1) & 3;
+        auto b = GetLocalBound();
+        b.w_ /= 4;
+        b.x_ = b.w_ * slice;
+        Repaint(b);
+    }
+
+    void PaintSelf(Graphic& g) override {
+        g.Fill(Color{uint32_t(rand() & 0xffffffu)});
+    }
+    void Resized() override {
+        c1.SetBound(0, 0, 20, 20);
+        c2.SetBound(40, 40, 20, 20);
+    }
+private:
+    int slice{};
+    int slice2{};
+    Component1 c1;
+    Component2 c2;
+};
+
+static void MyQueueLock(void* arg) {
+    SemaphoreHandle_t* sema = (SemaphoreHandle_t*)arg;
+    xSemaphoreTake(*sema, portMAX_DELAY);
+}
+
+static void MyQueueUnlock(void* arg) {
+    SemaphoreHandle_t* sema = (SemaphoreHandle_t*)arg;
+    xSemaphoreGive(*sema);
+}
+
+static void MyMessageWait(void* arg) {
+    SemaphoreHandle_t* sema = (SemaphoreHandle_t*)arg;
+    xSemaphoreTake(*sema, portMAX_DELAY);
+}
+
+static void MyQueueNotify(void* arg) {
+    SemaphoreHandle_t* sema = (SemaphoreHandle_t*)arg;
+    xSemaphoreGive(*sema);
+}
+
+static void MyLcdTask(void*) {
+    // ll init
     ST7735_t dev;
     spi_master_init(&dev, 2, 1, 41, 40, 42);
     lcdInit(&dev, 128, 160, 0, 0);
     lcdDisplayOn(&dev);
     alignas(32) static uint16_t screen_buffer[128][160] = {};
-    MainWindow w {128, 160};
     LLContext context {screen_buffer};
 
-    Component1 c1;
-    c1.SetBound(Bound{0,0,20,20});
-    Component2 c2;
-    c2.SetBound(Bound{40,40,20,20});
-    w.AddChild(&c1);
-    w.AddChild(&c2);
+    // msg queue init
+    SemaphoreHandle_t queue_sema = xSemaphoreCreateBinary();
+    SemaphoreHandle_t lock_sema = xSemaphoreCreateBinary();
+    xSemaphoreGive(lock_sema);
+
+    MsgQueue::lock_obj = &lock_sema;
+    MsgQueue::msg_notify_obj = &queue_sema;
+    MsgQueue::get_lock = &MyQueueLock;
+    MsgQueue::release_lock = &MyQueueUnlock;
+    MsgQueue::notify = &MyQueueNotify;
+    MsgQueue::wait = &MyMessageWait;
+
+    // gui init
+    static MainComponent w{&context};
+    w.SetBound(Bound{0,0,128,160});
+
+    auto& mq = MsgQueue::GetInstance();
     for (;;) {
-        Graphic g{w.GetLocalBound(), context};
-        w.PaintAll(g);
-        LcdDrawScreen(&dev, (uint16_t*)screen_buffer, 0, 0, 128, 160);
-        vTaskDelay(pdMS_TO_TICKS(100));
+        auto msg = mq.Pop();
+        if (msg.command == cmds::kPaint) {
+            msg.handler();
+            LcdDrawScreen(&dev, (uint16_t*)screen_buffer, 0, 0, 128, 160);
+        }
+        else {  
+            msg.handler();
+        }
+        // vTaskDelay(pdMS_TO_TICKS(100));
+    }
+    vTaskDelete(nullptr);
+}
+
+static void TimerQueueTask(void*) {
+    TimerQueue::min_ms = 10;
+    auto last_tick = xTaskGetTickCount();
+    for (;;) {
+        TimerQueue::GetInstance().Tick();
+        vTaskDelay(pdMS_TO_TICKS(TimerQueue::min_ms));
+        xTaskDelayUntil(&last_tick, pdMS_TO_TICKS(TimerQueue::min_ms));
     }
     vTaskDelete(nullptr);
 }
@@ -259,6 +365,7 @@ extern "C" void app_main(void) {
     };
     MatrixKeyboard_Init(&matrix_config);
 
+    xTaskCreate(TimerQueueTask, "TimerQueueTask", 2048, NULL, 5, NULL);
     xTaskCreate(AdcTask, "AdcTask", 4096, NULL, 5, NULL);
-    xTaskCreate(LcdTask, "LcdTask", 4096, NULL, 5, NULL);
+    xTaskCreate(MyLcdTask, "LcdTask", 4096, NULL, 5, NULL);
 }

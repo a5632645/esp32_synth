@@ -4,6 +4,8 @@
 #error only c++ support
 #endif
 
+#include <algorithm>
+
 struct Bound {
     int x_{};
     int y_{};
@@ -42,11 +44,11 @@ struct Bound {
         return Bound{ x_ + w_ / 2 - w / 2, y_ + h_ / 2 - h / 2, w, h };
     }
 
-    constexpr Bound LimitIn(Bound bound) {
+    constexpr Bound GetIntersection(Bound bound) {
         auto x = std::max(x_, bound.x_);
         auto y = std::max(y_, bound.y_);
         auto w = std::min(x_ + w_, bound.x_ + bound.w_) - x;
         auto h = std::min(y_ + h_, bound.y_ + bound.h_) - y;
-        return Bound{ x, y, w, h };
+        return Bound{ x, y, std::max(0, w), std::max(0, h) };
     }
 };
