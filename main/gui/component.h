@@ -10,11 +10,19 @@
 
 class Component {
 public:
-    virtual ~Component() = default;
     virtual void PaintSelf(Graphic& g) = 0;
     virtual void Resized() = 0;
     
+    /**
+     * @brief get local bound
+     * @return local bound
+     */
     Bound GetLocalBound() { return local_bound_; }
+
+    /**
+     * @brief get bound in top level parent
+     * @return bound
+     */
     Bound GetBound() { return bound_; }
 
     void AddChild(Component* child) {
@@ -31,14 +39,14 @@ public:
         local_bound_ = bound;
         if(parent_ == nullptr) {
             bound_ = bound;
-            return;
         }
-        
-        auto parent_bound = parent_->GetBound();
-        parent_bound.Shifted(bound.x_, bound.y_);
-        parent_bound.w_ = bound.w_;
-        parent_bound.h_ = bound.h_;
-        bound_ = parent_bound;
+        else {
+            auto parent_bound = parent_->GetBound();
+            parent_bound.Shifted(bound.x_, bound.y_);
+            parent_bound.w_ = bound.w_;
+            parent_bound.h_ = bound.h_;
+            bound_ = parent_bound;
+        }
         Resized();
     }
 
@@ -47,6 +55,13 @@ public:
         PaintSelf(g);
         for (auto* child : children_)
             child->PaintAll(g);
+    }
+
+    virtual ~Component() {
+        for (auto* child : children_) {
+            child->parent_ = nullptr;
+            child->SetBound(child->GetLocalBound());
+        }
     }
 private:
     std::vector<Component*> children_;
