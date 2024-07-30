@@ -1,48 +1,56 @@
 #include <string.h>
 #include <esp_log.h>
-#include "gui/ll_context.h"
 #include "st7735_ll_contex.h"
 
-inline static int XYToIndex(int x, int y) {
-    return y * 128 + x;
+inline static constexpr int XYToIndex(int x, int y) {
+    return y * St7735LLContext::kWidth + x;
 }
-inline static uint16_t ColorTransform(Color c) {
+
+inline static constexpr uint16_t ColorTransform(MyColor c) {
     return (((c.r & 0xF8) << 8) | ((c.g & 0xFC) << 3) | (c.b >> 3));
 }
 
-void LLContext::SetColor(int x, int y, Color c) {
-    St7735LLContext* cc = (St7735LLContext*)context_;
-    uint16_t* p = (uint16_t*)cc->screen_buffer + XYToIndex(x, y);
+void St7735LLContext::SetColor(int x, int y, MyColor c) {
+    uint16_t* p = (uint16_t*)screen_buffer + XYToIndex(x, y);
     *p = ColorTransform(c);
 }
 
-void LLContext::FillColorHorizenLine(int y, int x, int w, Color c) {
-    St7735LLContext* cc = (St7735LLContext*)context_;
-    uint16_t* p = (uint16_t*)cc->screen_buffer + XYToIndex(x, y);
+void St7735LLContext::FillColorHorizenLine(int y, int x, int w, MyColor c) {
+    uint16_t* p = (uint16_t*)screen_buffer + XYToIndex(x, y);
     uint16_t color = ColorTransform(c);
     for (int i = 0; i < w; ++i) {
         *p++ = color;
     }
 }
 
-void LLContext::FillColorVeticalLine(int x, int y, int h, Color c) {
+void St7735LLContext::FillColorVeticalLine(int x, int y, int h, MyColor c) {
     uint16_t color = ColorTransform(c);
-    St7735LLContext* cc = (St7735LLContext*)context_;
     for (int i = 0; i < h; ++i) {
-        uint16_t* p = (uint16_t*)cc->screen_buffer + XYToIndex(x, y + i);
+        uint16_t* p = (uint16_t*)screen_buffer + XYToIndex(x, y + i);
         *p = color;
     }
 }
 
-void LLContext::FillColorRect(int x, int y, int w, int h, Color c) {
+void St7735LLContext::FillColorRect(int x, int y, int w, int h, MyColor c) {
     for (int i = 0; i < h; ++i) {
         FillColorHorizenLine(y + i, x, w, c);
     }
 }
 
-void LLContext::FlushScreen(int x, int y, int w, int h) {
-    St7735LLContext* c = (St7735LLContext*)context_;
-    LcdDrawScreen(&c->dev, (uint16_t*)c->screen_buffer, 0, 0, St7735LLContext::kWidth, St7735LLContext::kHeight);
+void St7735LLContext::FillColorHorizenLineMask(int y, int x, int w, uint8_t *mask, MyColor c) {
+    uint16_t color = ColorTransform(c);
+    constexpr auto kColorMask = ColorTransform(MyColor{0, 0, 0});
+    for (int i = 0; i < w; ++i) {
+        uint16_t* p = (uint16_t*)screen_buffer + XYToIndex(x + i, y);
+        if (mask[i] != 0)
+            *p = color;
+        else
+            *p = kColorMask;
+    }
+}
+
+void St7735LLContext::FlushScreen(int x, int y, int w, int h) {
+    LcdDrawScreen(&dev, (uint16_t*)screen_buffer, 0, 0, St7735LLContext::kWidth, St7735LLContext::kHeight);
     // if (w == St7735LLContext::kWidth && h == St7735LLContext::kHeight) {
     //     LcdDrawScreen(&c->dev, (uint16_t*)c->screen_buffer, x, y, w, h);
     // }

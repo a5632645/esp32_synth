@@ -1,12 +1,19 @@
-set(CODE_SOURCE
+set (GUI_SOURCES
+    "gui/component_peer.cpp"
+    "gui/my_font.cpp"
+    "gui/timer_queue.cpp"
+)
+set (DRIVER_SOURCES
     "lcd.c"
     "i2s_audio.c"
     "uart_midi.c"
-    "main.cpp"
     "my_adc.c"
     "keyboard.c"
+)
+set (USER_SOURCES
+    "main.cpp"
     "st7735_ll_contex.cpp"
-    "gui/timer_queue.cpp")
+)
 
-idf_component_register(SRCS ${CODE_SOURCE}
+idf_component_register(SRCS ${GUI_SOURCES} ${DRIVER_SOURCES} ${USER_SOURCES}
                     INCLUDE_DIRS ".")

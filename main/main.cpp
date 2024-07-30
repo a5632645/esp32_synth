@@ -1,5 +1,6 @@
 #include <cmath>
 #include <array>
+#include <string>
 #include <esp_log.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
@@ -12,6 +13,7 @@
 #include "gui/msg_queue.h"
 #include "gui/timer_task.h"
 #include "gui/timer_queue.h"
+#include "gui/component_peer.h"
 #include "st7735_ll_contex.h"
 
 class TestGen {
@@ -183,78 +185,30 @@ static void AdcTask(void*) {
 // ================================================================================
 // lcd
 // ================================================================================
-class Component1 : public Component, public TimerTask {
+class TopComponent : public Component {
 public:
-    Component1() {
-        StartTimerHz(10.0f);
-    }
-
-    void TimerCallback() override {
-        Repaint(GetLocalBound());
-    }
-
     void PaintSelf(Graphic& g) override {
-        auto b = GetLocalBound();
-        g.Fill(colors::kGreen);
-        g.SetColor(colors::kWhite);
-        g.DrawLine(rand() % b.w_, rand() % b.h_, rand() % b.w_, rand() % b.h_);
-        g.DrawRect(GetLocalBound());
-    }
-    void Resized() override {
+        g.Fill(MyColors::kBlack);
     }
 };
 
-class Component2 : public Component, public TimerTask {
+class TextComponent : public Component, public TimerTask {
 public:
-    Component2() {
-        StartTimerHz(30.0f);
+    void PaintSelf(Graphic& g) override {
+        g.SetColor(MyColors::kWhite);
+        g.DrawSingleLineText(std::to_string(tick_).c_str(), 0, 0);
     }
 
     void TimerCallback() override {
-        Repaint(GetLocalBound());
-    }
-
-    void PaintSelf(Graphic& g) override {
-        auto b = GetLocalBound();
-        g.Fill(colors::kBlack);
-        g.SetColor(colors::kWhite);
-        g.FillRect(rand() % b.w_, rand() % b.h_, rand() % b.w_, rand() % b.h_);
-        g.SetColor(colors::kRed);
-        g.DrawRect(GetLocalBound());
-    }
-    void Resized() override {
-    }
-};
-
-class MainComponent : public Component, public TimerTask {
-public:
-    MainComponent(LLContext* ctx)
-        : Component(ctx) {
-        AddChild(&c1);
-        AddChild(&c2);
-        StartTimerHz(1.0f);
-    }
-
-    void TimerCallback() override {
-        slice = (slice + 1) & 3;
-        auto b = GetLocalBound();
-        b.w_ /= 4;
-        b.x_ = b.w_ * slice;
-        Repaint(b);
-    }
-
-    void PaintSelf(Graphic& g) override {
-        g.Fill(Color{uint32_t(rand() & 0xffffffu)});
-    }
-    void Resized() override {
-        c1.SetBound(0, 0, 20, 20);
-        c2.SetBound(40, 40, 20, 20);
+        ++tick_;
+        MsgQueue::GetInstance().Push(MsgQueue::Message{
+            .handler = [this](void*) {
+                Repaint();
+            }
+        });
     }
 private:
-    int slice{};
-    int slice2{};
-    Component1 c1;
-    Component2 c2;
+    int tick_{0};
 };
 
 static void MyQueueLock(void* arg) {
@@ -283,7 +237,6 @@ static void MyLcdTask(void*) {
     spi_master_init(&ll_context.dev, 2, 1, 41, 40, 42);
     lcdInit(&ll_context.dev, 128, 160, 0, 0);
     lcdDisplayOn(&ll_context.dev);
-    LLContext context {&ll_context};
 
     // msg queue init
     SemaphoreHandle_t queue_sema = xSemaphoreCreateBinary();
@@ -298,12 +251,27 @@ static void MyLcdTask(void*) {
     MsgQueue::wait = &MyMessageWait;
 
     // gui init
-    static MainComponent w{&context};
-    w.SetBound(Bound{0,0,128,160});
+    static TopComponent w;
+    TextComponent text;
+    w.AddChild(&text);
+
+    TextComponent text2;
+    w.AddChild(&text2);
+
+    ComponentPeer peer {&ll_context};
+    peer.ChangeComponent(&w);
+
+    text.SetBound(0, 0, 50, 20);
+    text2.SetBound(0, 20, 50, 40);
+    text.StartTimerHz(1);
+    text2.StartTimerHz(10);
 
     auto& mq = MsgQueue::GetInstance();
     for (;;) {
-        mq.Loop();
+        if (mq.CollectMessageIf())
+            mq.DispatchMessage();
+
+        peer.FlushInvalidRects();
     }
     vTaskDelete(nullptr);
 }

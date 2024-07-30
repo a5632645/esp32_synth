@@ -4,13 +4,10 @@
 #error only c++ support
 #endif
 
-#include <array>
+#include <vector>
 #include <cstdint>
 #include <functional>
-
-namespace cmds {
-static constexpr auto kPaint = 1;
-}
+#include <array>
 
 class MsgQueue {
 private:
@@ -19,6 +16,7 @@ private:
 
     static void DummyWait(void*) {
         while (!has_message) {}
+        has_message = false;
     }
 
     static void DummyLock(void*) {
@@ -42,8 +40,24 @@ public:
     inline static void(*get_lock)(void*) = DummyLock;
     inline static void(*release_lock)(void*) = DummyUnLock;
 
+    struct MsgQueueLock {
+        MsgQueueLock() {
+            MsgQueue::get_lock(MsgQueue::lock_obj);
+        }
+        ~MsgQueueLock() {
+            MsgQueue::release_lock(MsgQueue::lock_obj);
+        }
+        void Unlock() {
+            MsgQueue::release_lock(MsgQueue::lock_obj);
+        }
+        void Lock() {
+            MsgQueue::get_lock(MsgQueue::lock_obj);
+        }
+    };
+
     struct Message {
         static constexpr auto kMaxMessageDataByte = 32;
+
         int command = 0;
         std::array<uint8_t, kMaxMessageDataByte> data {};
         std::function<void(void*)> handler;
@@ -55,74 +69,66 @@ public:
     }
 
     bool Push(Message message) {
-        // TODO: check if this is main thread...
-        // if is, handler may call from main thread and goto dead lock
-        // so just add it to the queue...
-        struct ScopeLock {
-            ScopeLock() {
-                MsgQueue::get_lock(MsgQueue::lock_obj);
-            }
-            ~ScopeLock() {
-                MsgQueue::release_lock(MsgQueue::lock_obj);
-            }
-        } s;
+        MsgQueueLock s;
+        return PushUnlock(std::move(message));
+    }
 
-        if (count_ == kMaxMessageCount) {
+    bool PushUnlock(Message message) {
+        if (count_ == kMaxMessageCount)
             return false;
-        }
 
-        if (count_ > 0 && message.command == cmds::kPaint) { // merge paint command
-            auto&last_msg = messages_[(write_pos_ + kMaxMessageCount - 1) & (kMaxMessageCount - 1)];
-            if (last_msg.command == cmds::kPaint) {
-                bool flush_screen = false;
-                memcpy(&flush_screen, last_msg.data.data(), sizeof(flush_screen));
-            }
-        }
-
-        messages_[write_pos_] = std::move(message);
-        write_pos_ = (write_pos_ + 1) & (kMaxMessageCount - 1);
+        messages_.emplace_back(std::move(message));
         ++count_;
         MsgQueue::notify(MsgQueue::msg_notify_obj);
         return true;
     }
 
+    Message* GetLastMsgUnlock() {
+        if (count_ == 0)
+            return nullptr;
+        return messages_.data() + count_ - 1;
+    }
+
     void Loop() {
         for (;;) {
-            struct ScopeLock {
-                ScopeLock() {
-                    MsgQueue::get_lock(MsgQueue::lock_obj);
-                }
-                ~ScopeLock() {
-                    MsgQueue::release_lock(MsgQueue::lock_obj);
-                }
-                void Unlock() {
-                    MsgQueue::release_lock(MsgQueue::lock_obj);
-                }
-                void Lock() {
-                    MsgQueue::get_lock(MsgQueue::lock_obj);
-                }
-            } s;
-
-            if (count_ == 0) {
-                s.Unlock();
-                MsgQueue::wait(MsgQueue::msg_notify_obj);
-                s.Lock();
+            while (!CollectMessageIf()) {
+                WaitMessage();
             }
-
-            auto rrpos = read_pos_;
-            read_pos_ = (read_pos_ + 1) & (kMaxMessageCount - 1);
-            --count_;
-            auto& msg = messages_[rrpos];
-            msg.handler((void*)msg.data.data());
-            msg.handler = [](void*){};
+            DispatchMessage();
         }
     }
-private:
-    MsgQueue() = default;
 
-    static constexpr auto kMaxMessageCount = 256;
-    std::array<Message, kMaxMessageCount> messages_{};
-    std::size_t read_pos_{};
-    std::size_t write_pos_{};
+    bool CollectMessageIf() {
+        MsgQueueLock s;
+
+        batch_messages_.swap(messages_);
+        count_ = 0;
+        return !batch_messages_.empty();
+    }
+
+    void WaitMessage() {
+        MsgQueueLock s;
+
+        if (count_ == 0) {
+            s.Unlock();
+            MsgQueue::wait(MsgQueue::msg_notify_obj);
+        }
+    }
+
+    void DispatchMessage() {
+        for (auto& msg : batch_messages_) {
+            msg.handler(msg.data.data());
+        }
+        batch_messages_.clear();
+    }
+private:
+    MsgQueue() {
+        messages_.reserve(kMaxMessageCount);
+        batch_messages_.reserve(kMaxMessageCount);
+    }
+
+    static constexpr auto kMaxMessageCount = 64;
+    std::vector<Message> messages_{};
+    std::vector<Message> batch_messages_{};
     std::size_t count_{};
 };
