@@ -56,11 +56,8 @@ public:
     };
 
     struct Message {
-        static constexpr auto kMaxMessageDataByte = 32;
-
         int command = 0;
-        std::array<uint8_t, kMaxMessageDataByte> data {};
-        std::function<void(void*)> handler;
+        std::function<void()> handler;
     };
 
     static MsgQueue& GetInstance() {
@@ -89,7 +86,7 @@ public:
         return messages_.data() + count_ - 1;
     }
 
-    void Loop() {
+    void BlockingLoop() {
         for (;;) {
             while (!CollectMessageIf()) {
                 WaitMessage();
@@ -117,7 +114,7 @@ public:
 
     void DispatchMessage() {
         for (auto& msg : batch_messages_) {
-            msg.handler(msg.data.data());
+            msg.handler();
         }
         batch_messages_.clear();
     }

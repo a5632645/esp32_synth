@@ -1,7 +1,9 @@
 set (GUI_SOURCES
+    "gui/component.cpp"
     "gui/component_peer.cpp"
     "gui/my_font.cpp"
     "gui/timer_queue.cpp"
+    "gui/graphic.cpp"
 )
 set (DRIVER_SOURCES
     "lcd.c"

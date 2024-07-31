@@ -19,5 +19,4 @@ public:
     }
 
     void GetMask(char c, int offset_y, uint8_t* mask) const;
-private:
 };

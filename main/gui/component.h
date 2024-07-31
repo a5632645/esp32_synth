@@ -11,6 +11,7 @@
 
 class Component {
 public:
+    virtual ~Component();
     virtual void PaintSelf(Graphic& g) {}
     virtual void Resized() {}
     
@@ -28,95 +29,38 @@ public:
      */
     Bound GetBoundTopParent() { return global_bound_; }
 
-    void AddChild(Component* child) {
-        child->parent_ = this;
-        child->SetBound(child->GetLocalBound());
-        children_.push_back(child);
-    }
-    void RemoveChild(Component* child) {
-        child->parent_ = nullptr;
-        child->SetBound(child->GetLocalBound());
-        children_.erase(std::remove(children_.begin(), children_.end(), child), children_.end());
-    }
+    void AddChild(Component* child);
+    void RemoveChild(Component* child);
 
     void SetBound(int x, int y, int w, int h) {
-        SetBound(Bound{x, y, w, h});
+        SetBound(Bound{x, y, w, h}); 
     }
-
-    void SetBound(Bound bound) {
-        if (bound_parent_ == bound)
-            return;
-
-        InternalRepaint(global_bound_); // invalid old aera
-        
-        bound_parent_ = bound;
-        if(parent_ == nullptr) {
-            global_bound_ = bound;
-        }
-        else {
-            auto parent_bound = parent_->GetBoundTopParent();
-            parent_bound.Shifted(bound.x_, bound.y_);
-            parent_bound.w_ = bound.w_;
-            parent_bound.h_ = bound.h_;
-            global_bound_ = parent_bound;
-        }
-        InternalRepaint(global_bound_); // repaint new aera
-        Resized();
-    }
-
-    virtual ~Component() {
-        for (auto* child : children_) {
-            child->parent_ = nullptr;
-            child->SetBound(child->GetLocalBound());
-        }
-    }
+    void SetBound(Bound bound);
 
     void Repaint(Bound bound) {
         auto b = global_bound_.Shift(bound.x_, bound.y_);
         b.w_ = bound.w_;
         b.h_ = bound.h_;
-
-        if (parent_ != nullptr)
-            parent_->InternalRepaint(b);
-        else
-            InternalRepaint(b);
+        InternalRepaint(b);
     }
-
     void Repaint() {
-        Repaint(GetLocalBound());
+        Repaint(GetLocalBound()); 
     }
 
     Component* GetParent() const { return parent_; }
+    ComponentPeer* GetPeer() const { return peer_; }
+    size_t GetNumChild() const { return children_.size(); }
+    Component* GetChildUncheck(size_t i) const { return children_[i]; }
 private:
     friend class ComponentPeer;
 
-    void InternalPaint(Graphic& g, Bound repaint_bound) {
-        auto intersection = global_bound_.GetIntersectionUncheck(repaint_bound);
-        if(!intersection.IsValid())
-            return;
+    void InternalPaint(Graphic& g, Bound repaint_bound);
 
-        g.SetClipBoundGlobal(intersection);
-        g.SetComponentBound(global_bound_);
-        PaintSelf(g);
-        for (auto* child : children_)
-            child->InternalPaint(g, intersection);
-    }
-
-    void InternalRepaint(Bound repaint_bound) {
-        if (parent_ != nullptr) {
-            parent_->InternalRepaint(repaint_bound);
-            return;
-        }
-
-        if (peer_ == nullptr)
-            return;
-
-        peer_->AddInvalidRect(repaint_bound);
-    }
+    void InternalRepaint(Bound repaint_bound);
 
     std::vector<Component*> children_;
     ComponentPeer* peer_ = nullptr;
     Component* parent_ = nullptr;
-    Bound bound_parent_;     // bound in parent
+    Bound bound_parent_; // bound in parent
     Bound global_bound_; // bound in top level parent
 };

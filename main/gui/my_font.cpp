@@ -1,5 +1,4 @@
 #include "my_font.h"
-#include <cstring>
 
 // https://github.com/dhepper/font8x8/blob/master/font8x8_basic.h
 static constexpr char font8x8_basic[128][8] = {
@@ -135,7 +134,7 @@ static constexpr char font8x8_basic[128][8] = {
 
 void MyFont::GetMask(char c, int offset_y, uint8_t* mask) const {
     if ((uint8_t)c & 0x80)
-        memset(mask, 0, GetWidth(c));
+        c = '?';
 
     auto bitset = font8x8_basic[(uint8_t)c][offset_y];
     for (int i = 0; i < 8; ++i)

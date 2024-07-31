@@ -4,7 +4,23 @@
 #error only c++ support
 #endif
 
+#include <utility>
 #include <algorithm>
+
+struct MyPoint {
+    int x_{};
+    int y_{};
+
+    MyPoint() = default;
+    constexpr MyPoint(int x, int y) : x_(x), y_(y) {}
+    constexpr bool operator==(const MyPoint& point) const {
+        return x_ == point.x_ && y_ == point.y_;
+    }
+
+    constexpr MyPoint operator+(const MyPoint& point) const {
+        return MyPoint{ x_ + point.x_, y_ + point.y_ };
+    }
+};
 
 struct Bound {
     int x_{};
@@ -70,5 +86,37 @@ struct Bound {
 
     constexpr bool Contain(Bound bound) const {
         return x_ <= bound.x_ && y_ <= bound.y_ && x_ + w_ >= bound.x_ + bound.w_ && y_ + h_ >= bound.y_ + bound.h_;
+    }
+
+    constexpr bool ContainPoint(int x, int y) const {
+        return x >= x_ && y >= y_ && x < x_ + w_ && y < y_ + h_;
+    }
+
+    constexpr MyPoint GetCenter() const {
+        return MyPoint{ x_ + w_ / 2, y_ + h_ / 2 };
+    }
+
+    // ================================================================================
+    constexpr Bound RemoveFromTop(int h) {
+        auto b = Bound {x_, y_, w_, h};
+        y_ += h;
+        h_ -= h;
+        return b;
+    }
+    constexpr Bound RemoveFromBottom(int h) {
+        auto b = Bound{ x_, y_ + h_ - h, w_, h };
+        h_ -= h;
+        return b;
+    }
+    constexpr Bound RemoveFromLeft(int w) {
+        auto b = Bound{ x_, y_, w, h_ };
+        x_ += w;
+        w_ -= w;
+        return b;
+    }
+    constexpr Bound RemoveFromRight(int w) {
+        auto b = Bound{ x_ + w_ - w, y_, w, h_ };
+        w_ -= w;
+        return b;
     }
 };

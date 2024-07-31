@@ -1,90 +1,62 @@
 #include "component_peer.h"
 #include "component.h"
 
-#define OPTION_PEER_SIMPLE_MERGE 0
-
 void ComponentPeer::AddInvalidRect(Bound bound) {
+    bound = bound.GetIntersectionUncheck(context_->GetBound());
+
     if (!bound.IsValid())
         return;
         
-    if (!bybass_cache) {
-        for (auto& b : invalid_rects_) { // merge invalid_rects_
-            if (b.Contain(bound))
-                return;
-
-            if (bound.Contain(b)) {
-                b = bound;
-                return;
-            }
-
-            auto intersection = b.GetIntersectionUncheck(bound);
-            if (!intersection.IsValid())
-                continue;
-
-#if OPTION_PEER_SIMPLE_MERGE == 1
-            // add outside subtract bound
-            Bound outside;
-            if (intersection.w_ == bound.w_) {
-                outside.x_ = bound.x_;
-                outside.w_ = bound.w_;
-                outside.h_ = bound.h_ - intersection.h_;
-                if (intersection.y_ == bound.y_) {
-                    outside.y_ = bound.y_ + intersection.h_;
-                }
-                else {
-                    outside.y_ = bound.y_;
-                }
-                invalid_rects_.push_back(outside);
-                return;
-            }
-            else if (intersection.h_ == bound.h_) {
-                outside.y_ = bound.y_;
-                outside.h_ = bound.h_;
-                outside.w_ = bound.w_ - intersection.w_;
-                if (intersection.x_ == bound.x_) {
-                    outside.x_ = bound.x_ + intersection.w_;
-                }
-                else {
-                    outside.x_ = bound.x_;
-                }
-                invalid_rects_.push_back(outside);
-                return;
-            }
-            else {
-                continue;
-            }
-#else
-            Bound larger;
-            larger.x_ = std::min(bound.x_, b.x_);
-            larger.y_ = std::min(bound.y_, b.y_);
-            larger.w_ = std::max(bound.x_ + bound.w_, b.x_ + b.w_) - larger.x_;
-            larger.h_ = std::max(bound.y_ + bound.h_, b.y_ + b.h_) - larger.y_;
-            b = larger;
+    for (auto& b : invalid_rects_cache_) { // merge invalid_rects_
+        if (b.Contain(bound))
             return;
-#endif
+
+        if (bound.Contain(b)) {
+            b = bound;
+            return;
         }
-        invalid_rects_.push_back(bound);
+
+        auto intersection = b.GetIntersectionUncheck(bound);
+        if (intersection.w_ < 0 && intersection.h_ < 0) // if the bounds are not intersect at least a pixel
+            continue;
+
+        Bound larger;
+        larger.x_ = std::min(bound.x_, b.x_);
+        larger.y_ = std::min(bound.y_, b.y_);
+        larger.w_ = std::max(bound.x_ + bound.w_, b.x_ + b.w_) - larger.x_;
+        larger.h_ = std::max(bound.y_ + bound.h_, b.y_ + b.h_) - larger.y_;
+        b = larger;
+        return;
     }
-    else {
-        Graphic g{*context_};
-        owner_->InternalPaint(g, bound);
-        context_->FlushScreen(bound.x_, bound.y_, bound.w_, bound.h_);
-    }
+    invalid_rects_cache_.push_back(bound);
 }
 
 void ComponentPeer::FlushInvalidRects() {
-    if (invalid_rects_.empty())
+    if (invalid_rects_cache_.empty())
         return;
     if (owner_ == nullptr)
         return;
     if (context_ == nullptr)
         return;
 
+    invalid_rects_cache_.swap(invalid_rects_);
     Graphic g{*context_};
+    Bound dirty_aera = invalid_rects_.front();
+    int left = dirty_aera.x_ + dirty_aera.w_;
+    int bottom = dirty_aera.y_ + dirty_aera.h_;
+    context_->BeginFrame();
     for (auto& b : invalid_rects_) {
         owner_->InternalPaint(g, b);
-        context_->FlushScreen(b.x_, b.y_, b.w_, b.h_);
+        context_->FlushScreen(b);
+
+        dirty_aera.x_ = std::min(dirty_aera.x_, b.x_);
+        dirty_aera.y_ = std::min(dirty_aera.y_, b.y_);
+        left = std::max(left, b.x_ + b.w_);
+        bottom = std::max(bottom, b.y_ + b.h_);
     }
+    dirty_aera.w_ = left - dirty_aera.x_;
+    dirty_aera.h_ = bottom - dirty_aera.y_;
+    context_->EndFrame(dirty_aera);
     invalid_rects_.clear();
 }
 

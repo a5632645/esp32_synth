@@ -14,7 +14,7 @@ class TimerTask;
 
 class TimerQueue {
 public:
-    inline static int min_ms = 0;
+    inline static int min_ms = 10;
 
     struct OneShotTask {
         std::function<void()> callback;

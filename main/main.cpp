@@ -15,6 +15,7 @@
 #include "gui/timer_queue.h"
 #include "gui/component_peer.h"
 #include "st7735_ll_contex.h"
+#include "ui/top_window.h"
 
 class TestGen {
 public:
@@ -94,6 +95,7 @@ private:
 };
 
 static PolyGen poly_gen;
+static TopWindow top_window;
 
 // ================================================================================
 // audio
@@ -103,6 +105,8 @@ static void AudioCallback(float* buffer, int len) {
     //     buffer[i] = rand() * 2.0f / RAND_MAX - 1.0f;
     // }
     poly_gen.Process(buffer, len);
+    auto* osc = (OscPanel*)top_window.GetChildUncheck(1);
+    osc->PushSample(buffer, len);
 }
 
 // ================================================================================
@@ -176,7 +180,24 @@ static void AdcTask(void*) {
     SimpleAdcInit(ADC_UNIT_1, ADC_CHANNEL_5);
     SimpleAdcInit(ADC_UNIT_1, ADC_CHANNEL_6);
 
+    std::vector<int> adc_val;
+    adc_val.resize(4);
     for (;;) {
+        adc_val[0] = SimpleAdcRead(ADC_UNIT_1, ADC_CHANNEL_3);
+        adc_val[1] = SimpleAdcRead(ADC_UNIT_1, ADC_CHANNEL_4);
+        adc_val[2] = SimpleAdcRead(ADC_UNIT_1, ADC_CHANNEL_6);
+        adc_val[3] = SimpleAdcRead(ADC_UNIT_1, ADC_CHANNEL_5);
+
+        MsgQueue::GetInstance().Push({.handler={
+            [d = adc_val.data()]() {
+                auto* adc_window = (AdcPanel*)top_window.GetChildUncheck(0);
+                adc_window->SetAdcVal(0, d[0]);
+                adc_window->SetAdcVal(1, d[1]);
+                adc_window->SetAdcVal(2, d[2]);
+                adc_window->SetAdcVal(3, d[3]);
+            }
+        }});
+
         vTaskDelay(pdMS_TO_TICKS(100));
     }
     vTaskDelete(nullptr);
@@ -185,32 +206,6 @@ static void AdcTask(void*) {
 // ================================================================================
 // lcd
 // ================================================================================
-class TopComponent : public Component {
-public:
-    void PaintSelf(Graphic& g) override {
-        g.Fill(MyColors::kBlack);
-    }
-};
-
-class TextComponent : public Component, public TimerTask {
-public:
-    void PaintSelf(Graphic& g) override {
-        g.SetColor(MyColors::kWhite);
-        g.DrawSingleLineText(std::to_string(tick_).c_str(), 0, 0);
-    }
-
-    void TimerCallback() override {
-        ++tick_;
-        MsgQueue::GetInstance().Push(MsgQueue::Message{
-            .handler = [this](void*) {
-                Repaint();
-            }
-        });
-    }
-private:
-    int tick_{0};
-};
-
 static void MyQueueLock(void* arg) {
     SemaphoreHandle_t* sema = (SemaphoreHandle_t*)arg;
     xSemaphoreTake(*sema, portMAX_DELAY);
@@ -231,12 +226,19 @@ static void MyQueueNotify(void* arg) {
     xSemaphoreGive(*sema);
 }
 
+static void TimerQueueTask(void*) {
+    TimerQueue::min_ms = 10;
+    auto last_tick = xTaskGetTickCount();
+    for (;;) {
+        TimerQueue::GetInstance().Tick();
+        xTaskDelayUntil(&last_tick, pdMS_TO_TICKS(TimerQueue::min_ms));
+    }
+    vTaskDelete(nullptr);
+}
+
 static void MyLcdTask(void*) {
-    // ll init
-    static St7735LLContext ll_context;
-    spi_master_init(&ll_context.dev, 2, 1, 41, 40, 42);
-    lcdInit(&ll_context.dev, 128, 160, 0, 0);
-    lcdDisplayOn(&ll_context.dev);
+    // timer queue init
+    xTaskCreate(TimerQueueTask, "TimerQueueTask", 2048, NULL, 5, NULL);
 
     // msg queue init
     SemaphoreHandle_t queue_sema = xSemaphoreCreateBinary();
@@ -250,39 +252,22 @@ static void MyLcdTask(void*) {
     MsgQueue::notify = &MyQueueNotify;
     MsgQueue::wait = &MyMessageWait;
 
+    // ll driver init
+    static St7735LLContext ll_context;
+    spi_master_init(&ll_context.dev, 2, 1, 41, 40, 42);
+    lcdInit(&ll_context.dev, 128, 160, 0, 0);
+    lcdDisplayOn(&ll_context.dev);
+
     // gui init
-    static TopComponent w;
-    TextComponent text;
-    w.AddChild(&text);
-
-    TextComponent text2;
-    w.AddChild(&text2);
-
-    ComponentPeer peer {&ll_context};
-    peer.ChangeComponent(&w);
-
-    text.SetBound(0, 0, 50, 20);
-    text2.SetBound(0, 20, 50, 40);
-    text.StartTimerHz(1);
-    text2.StartTimerHz(10);
+    ComponentPeer peer1 {&ll_context};
+    peer1.ChangeComponent(&top_window);
 
     auto& mq = MsgQueue::GetInstance();
     for (;;) {
         if (mq.CollectMessageIf())
             mq.DispatchMessage();
-
-        peer.FlushInvalidRects();
-    }
-    vTaskDelete(nullptr);
-}
-
-static void TimerQueueTask(void*) {
-    TimerQueue::min_ms = 10;
-    auto last_tick = xTaskGetTickCount();
-    for (;;) {
-        TimerQueue::GetInstance().Tick();
-        vTaskDelay(pdMS_TO_TICKS(TimerQueue::min_ms));
-        xTaskDelayUntil(&last_tick, pdMS_TO_TICKS(TimerQueue::min_ms));
+        peer1.FlushInvalidRects();
+        vTaskDelay(1);
     }
     vTaskDelete(nullptr);
 }
@@ -291,6 +276,8 @@ static void TimerQueueTask(void*) {
 // app
 // ================================================================================
 extern "C" void app_main(void) {
+    xTaskCreate(MyLcdTask, "LcdTask", 4096, NULL, 4, NULL);
+
     I2sAudioConfigT i2s_config {
         .callback = AudioCallback,
         .i2s_port = I2S_NUM_0,
@@ -325,7 +312,5 @@ extern "C" void app_main(void) {
     };
     MatrixKeyboard_Init(&matrix_config);
 
-    xTaskCreate(TimerQueueTask, "TimerQueueTask", 2048, NULL, 5, NULL);
     xTaskCreate(AdcTask, "AdcTask", 4096, NULL, 5, NULL);
-    xTaskCreate(MyLcdTask, "LcdTask", 4096, NULL, 5, NULL);
 }
