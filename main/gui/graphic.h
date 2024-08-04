@@ -4,7 +4,6 @@
 #error only c++ support
 #endif
 
-#include <vector>
 #include <cstdint>
 #include "bound.h"
 #include "color.h"
@@ -14,6 +13,13 @@
 
 // some code is from here, thanks to
 // https://zingl.github.io/bresenham.html
+
+enum class MyJustification {
+    kLeft,
+    kCenter,
+    kRight
+};
+
 class Graphic {
 public:
     Graphic(LLContext& context)
@@ -56,8 +62,20 @@ public:
     }
 
     void DrawHorizenLine(int x, int y, int w);
+    void DrawHorizenLine2(int x1, int x2, int y) {
+        if (x1 > x2)
+            DrawHorizenLine(x2, y, x1 - x2);
+        else
+            DrawHorizenLine(x1, y, x2 - x1);
+    }
     
     void DrawVeticalLine(int x, int y, int h);
+    void DrawVeticalLine2(int y1, int y2, int x) {
+        if (y1 > y2)
+            DrawVeticalLine(x, y2, y1 - y2);
+        else
+            DrawVeticalLine(x, y1, y2 - y1);
+    }
 
     void DrawLine(MyPoint p1, MyPoint p2) {
         DrawLine(p1.x_, p1.y_, p2.x_, p2.y_);
@@ -65,10 +83,30 @@ public:
     void DrawLine(int x1, int y1, int x2, int y2);
 
     void SetFont(MyFont font) {
-        font_ = font;
+        font_ = std::move(font);
+    }
+    const MyFont& GetFont() const {
+        return font_;
     }
 
+    /**
+     * @brief draw single line text
+     * @param text the text
+     * @param x    the x of text left position
+     * @param y    the y of text top position
+     * @param w    the width of text, -1 means no limit
+     */
     void DrawSingleLineText(std::string_view text, int x, int y, int w = -1);
+    /**
+     * @brief draw single line text with justification
+     * @param text the text
+     * @param x    the x of text left position
+     * @param y    the y of text top position
+     * @param w    the width of text, only in left justification can be -1!
+     * @param j    the justification
+     * @note  if you provide -1 width in center or right, nothing will happen
+     */
+    void DrawSingleLineText(std::string_view text, int x, int y, int w, MyJustification j);
 
     void DrawEllipse(Bound bound);
     void FillEllipe(Bound bound);
@@ -102,13 +140,15 @@ public:
     }
 
     void SetPixel(MyPoint p) {
-        if (clip_bound_.ContainPoint(p.x_, p.y_))
-            context_.SetColor(p.x_, p.y_, color_);
+        p.x_ += component_bound_.x_;
+        p.y_ += component_bound_.y_;
+        InternalSetPixelClip(p, color_);
     }
 
     void SetPixel(MyPoint p, MyColor c) {
-        if (clip_bound_.ContainPoint(p.x_, p.y_))
-            context_.SetColor(p.x_, p.y_, c);
+        p.x_ += component_bound_.x_;
+        p.y_ += component_bound_.y_;
+        InternalSetPixelClip(p, c);
     }
 
     /**
@@ -120,6 +160,14 @@ public:
      */
     void MoveDrawContent(Bound aera, int dx, int dy, MyColor background);
 private:
+    inline void InternalSetPixelClip(MyPoint p, MyColor c) {
+        if (clip_bound_.ContainPoint(p.x_, p.y_))
+            context_.SetColor(p.x_, p.y_, c);
+    }
+    inline void InternalSetPixelClip(MyPoint p) {
+        InternalSetPixelClip(p, color_);
+    }
+
     Bound clip_bound_;
     Bound component_bound_;
     Bound buffer_bound_;

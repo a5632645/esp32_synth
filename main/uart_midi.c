@@ -37,6 +37,8 @@ static void UartMidiProcessStream(uint8_t* buffer, size_t size) {
     static uint32_t read_count = 0;
     static uint32_t msg_need = 0;
 
+    ESP_LOG_BUFFER_HEX("uart", buffer, size);
+
     for (size_t offset = 0; offset < size;) {
         if (state == kMidi_Empty) {
             // seek for support midi msg
@@ -108,6 +110,7 @@ void UartMidi_Init(const UartMidiConfigT* pconfig) {
     cfg.stop_bits = UART_STOP_BITS_1;
     cfg.flow_ctrl = UART_HW_FLOWCTRL_DISABLE;
     cfg.source_clk  = UART_SCLK_DEFAULT;
+    cfg.rx_flow_ctrl_thresh = 7;
     ESP_ERROR_CHECK(uart_param_config(pconfig->uart_port, &cfg));
 
     ESP_ERROR_CHECK(uart_set_pin(pconfig->uart_port, pconfig->tx_gpio, pconfig->rx_gpio,

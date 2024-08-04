@@ -119,4 +119,23 @@ struct Bound {
         w_ -= w;
         return b;
     }
+
+    constexpr Bound WithWH(int w, int h) {
+        return Bound{ x_, y_, w_, h_ };
+    }
+    constexpr Bound WithWidth(int w) {
+        return Bound{ x_, y_, w, h_ };
+    }
+    constexpr Bound WithHeight(int h) {
+        return Bound{ x_, y_, w_, h };
+    }
+    constexpr Bound WithXy(int x, int y) {
+        return Bound{ x, y, w_, h_ };
+    }
+    constexpr Bound WithX(int x) {
+        return Bound{ x, y_, w_, h_ };
+    }
+    constexpr Bound WithY(int y) {
+        return Bound{ x_, y, w_, h_ };
+    }
 };

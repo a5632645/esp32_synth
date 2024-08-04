@@ -18,5 +18,9 @@ public:
         return 8;
     }
 
+    int GetWidth(std::string_view text) const {
+        return static_cast<int>(text.size()) * 8;
+    }
+
     void GetMask(char c, int offset_y, uint8_t* mask) const;
 };

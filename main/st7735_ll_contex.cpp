@@ -9,7 +9,10 @@ inline static constexpr int XYToIndex(int x, int y) {
 }
 
 inline static constexpr uint16_t ColorTransform(MyColor c) {
-    return (((c.r & 0xF8) << 8) | ((c.g & 0xFC) << 3) | (c.b >> 3));
+    // return (((c.r & 0xF8) << 8) | ((c.g & 0xFC) << 3) | (c.b >> 3)); // RGB565
+    auto cc = c.BGR565();
+    // swap high and low
+    return (cc << 8) | (cc >> 8);
 }
 
 void St7735LLContext::BatchSetColor(int* x, int* y, MyColor c, int len) {
@@ -48,17 +51,14 @@ void St7735LLContext::FillColorRect(Bound aera, MyColor c) {
 
 void St7735LLContext::FillColorHorizenLineMask(int y, int x, int w, uint8_t *mask, MyColor c) {
     uint16_t color = ColorTransform(c);
-    constexpr auto kColorMask = ColorTransform(MyColor{0, 0, 0});
     for (int i = 0; i < w; ++i) {
         uint16_t* p = (uint16_t*)screen_buffer + XYToIndex(x + i, y);
         if (mask[i] != 0)
             *p = color;
-        else
-            *p = kColorMask;
     }
 }
 
-// void St7735LLContext::FlushScreen(Bound aera) {
+// void St7735LLContext::AeraPainted(Bound aera) {
 //     LcdDrawScreen(&dev, (uint16_t*)screen_buffer, 0, 0, St7735LLContext::kWidth, St7735LLContext::kHeight);
 //     // if (w == St7735LLContext::kWidth && h == St7735LLContext::kHeight) {
 //     //     LcdDrawScreen(&c->dev, (uint16_t*)c->screen_buffer, x, y, w, h);

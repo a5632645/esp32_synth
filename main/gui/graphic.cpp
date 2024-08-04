@@ -138,6 +138,23 @@ void Graphic::DrawSingleLineText(std::string_view text, int x, int y, int w) { /
     }
 }
 
+void Graphic::DrawSingleLineText(std::string_view text, int x, int y, int w, MyJustification j) {
+    if (j == MyJustification::kLeft) {
+        DrawSingleLineText(text, x, y, w);
+    }
+    else {
+        int total_width = font_.GetWidth(text);
+        
+        if (j == MyJustification::kCenter) {
+            x = x + (w - total_width) / 2;
+        }
+        else if (j == MyJustification::kRight) {
+            x = x + w - total_width;
+        }
+        DrawSingleLineText(text, x, y, total_width);
+    }
+}
+
 void Graphic::DrawEllipse(Bound bound) {
     if (!bound.IsValid())
         return;
@@ -164,10 +181,10 @@ void Graphic::DrawEllipse(Bound bound) {
     b1 = 8 * b * b;
 
     do {
-        SetPixel({x1, y0}); /*   I. Quadrant */
-        SetPixel({x0, y0}); /*  II. Quadrant */
-        SetPixel({x0, y1}); /* III. Quadrant */
-        SetPixel({x1, y1}); /*  IV. Quadrant */
+        InternalSetPixelClip({x1, y0}); /*   I. Quadrant */
+        InternalSetPixelClip({x0, y0}); /*  II. Quadrant */
+        InternalSetPixelClip({x0, y1}); /* III. Quadrant */
+        InternalSetPixelClip({x1, y1}); /*  IV. Quadrant */
         e2 = 2 * err;
         if (e2 <= dy) {
             y0++;
@@ -182,10 +199,10 @@ void Graphic::DrawEllipse(Bound bound) {
     } while (x0 <= x1);
 
     while (y0 - y1 < b) {                         /* too early stop of flat ellipses a=1 */
-        SetPixel({x0 - 1, y0}); /* -> finish tip of ellipse */
-        SetPixel({x1 + 1, y0++});
-        SetPixel({x0 - 1, y1});
-        SetPixel({x1 + 1, y1--});
+        InternalSetPixelClip({x0 - 1, y0}); /* -> finish tip of ellipse */
+        InternalSetPixelClip({x1 + 1, y0++});
+        InternalSetPixelClip({x0 - 1, y1});
+        InternalSetPixelClip({x1 + 1, y1--});
     }
 }
 

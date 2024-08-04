@@ -8,110 +8,94 @@
 #include <cstdint>
 #include <functional>
 #include <array>
+#include "gui_config.h"
 
 class MsgQueue {
-private:
-    inline static bool has_message = false;
-    inline static bool lock = false;
-
-    static void DummyWait(void*) {
-        while (!has_message) {}
-        has_message = false;
-    }
-
-    static void DummyLock(void*) {
-        while (lock) {}
-        lock = true;
-    }
-
-    static void DummyUnLock(void*) {
-        lock = false;
-    }
-
-    static void DummyNotify(void*) {
-        has_message = true;
-    }
-
 public:
-    inline static void* msg_notify_obj = nullptr;
-    inline static void* lock_obj = nullptr;
-    inline static void(*wait)(void*) = DummyWait;
-    inline static void(*notify)(void*) = DummyNotify;
-    inline static void(*get_lock)(void*) = DummyLock;
-    inline static void(*release_lock)(void*) = DummyUnLock;
-
-    struct MsgQueueLock {
-        MsgQueueLock() {
-            MsgQueue::get_lock(MsgQueue::lock_obj);
-        }
-        ~MsgQueueLock() {
-            MsgQueue::release_lock(MsgQueue::lock_obj);
-        }
-        void Unlock() {
-            MsgQueue::release_lock(MsgQueue::lock_obj);
-        }
-        void Lock() {
-            MsgQueue::get_lock(MsgQueue::lock_obj);
-        }
-    };
-
     struct Message {
         int command = 0;
         std::function<void()> handler;
     };
 
+    /**
+     * @brief  get a global message queue
+     * @return the global message queue
+     * @note   the message queue is not singleton, you can create multiple, but prefer to use this for gui
+     */
     static MsgQueue& GetInstance() {
         static MsgQueue instance;
         return instance;
     }
 
+    
+    /**
+     * @brief constructor
+     */
+    MsgQueue() {
+        messages_.reserve(kMaxMessageCount);
+        batch_messages_.reserve(kMaxMessageCount);
+    }
+
+    /**
+     * @brief push a message, it's thread safe
+     * @param message the message
+     * @return true if success, false if queue is full 
+     */
     bool Push(Message message) {
-        MsgQueueLock s;
+        MyScopeLock s { msg_lock_obj_ };
         return PushUnlock(std::move(message));
     }
 
+    /**
+     * @brief push a message, it's not thread safe
+     * @param message the message
+     * @return true if success, false if queue is full
+     */
     bool PushUnlock(Message message) {
-        if (count_ == kMaxMessageCount)
+        if (messages_.size() == kMaxMessageCount)
             return false;
 
         messages_.emplace_back(std::move(message));
-        ++count_;
-        MsgQueue::notify(MsgQueue::msg_notify_obj);
+        msg_notify_obj_.Notify();
         return true;
     }
 
+    /**
+     * @brief get last message, it's not thread safe
+     * @return the last message, nullptr if queue is empty
+     */
     Message* GetLastMsgUnlock() {
-        if (count_ == 0)
+        if (messages_.empty())
             return nullptr;
-        return messages_.data() + count_ - 1;
+        return &messages_.back();
     }
 
-    void BlockingLoop() {
-        for (;;) {
-            while (!CollectMessageIf()) {
-                WaitMessage();
-            }
-            DispatchMessage();
-        }
-    }
-
+    /**
+     * @brief  swap messages_ and batch_messages_
+     * @return is there any message to dispatch
+     */
     bool CollectMessageIf() {
-        MsgQueueLock s;
+        MyScopeLock s { msg_lock_obj_ };
 
         batch_messages_.swap(messages_);
-        count_ = 0;
         return !batch_messages_.empty();
     }
 
+    /**
+     * @brief block until there is a message
+     */
     void WaitMessage() {
-        MsgQueueLock s;
+        MyScopeLock s { msg_lock_obj_ };
 
-        if (count_ == 0) {
+        if (messages_.empty()) {
             s.Unlock();
-            MsgQueue::wait(MsgQueue::msg_notify_obj);
+            msg_notify_obj_.Wait();
         }
     }
 
+    /**
+     * @brief dispatch all messages, is not thread safe
+     */
     void DispatchMessage() {
         for (auto& msg : batch_messages_) {
             msg.handler();
@@ -119,13 +103,11 @@ public:
         batch_messages_.clear();
     }
 private:
-    MsgQueue() {
-        messages_.reserve(kMaxMessageCount);
-        batch_messages_.reserve(kMaxMessageCount);
-    }
-
     static constexpr auto kMaxMessageCount = 64;
     std::vector<Message> messages_{};
     std::vector<Message> batch_messages_{};
-    std::size_t count_{};
+
+    // lock
+    MyLock msg_lock_obj_;
+    MyNotify msg_notify_obj_;
 };

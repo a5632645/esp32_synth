@@ -4,7 +4,17 @@
 #error only c++ support
 #endif
 
-template<class MonoOsc>
+template<typename T>
+concept CanBeOsc = requires(T t, float a, int b, float* c) {
+    t.Init(a);
+    t.NoteOn(b, a);
+    t.NoteOff(b, a);
+    t.Process(c, b);
+    {t.GetNote()} -> std::same_as<int>;
+    {t.IsPlaying()} -> std::same_as<bool>;
+};
+
+template<CanBeOsc MonoOsc>
 class PolySynth {
 public:
     void Init(float sample_rate) {

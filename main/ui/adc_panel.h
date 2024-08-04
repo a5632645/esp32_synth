@@ -1,25 +1,27 @@
 #pragma once
 
 #include "gui/component.h"
+#include "gui/timer_queue.h"
+#include "model/synth_model.h"
 #include <string>
 
 class AdcPanel : public Component {
 public:
-    void SetAdcVal(int index, int val) {
-        adc_vals_[index] = val;
-        auto b = GetLocalBound();
-        b.y_ = index * 8;
-        b.h_ = 8;
-        Repaint(b);
+    AdcPanel() {
+        timer_task_ = TimerTask{
+            [this]{ Repaint(); return false; },
+            100
+        };
+        TimerQueue::GetInstance().AddTimer(&timer_task_, false, true);
     }
 
-    void PaintSelf(Graphic& g) override {
+    void DrawSelf(Graphic& g) override {
         g.Fill(colors::kBlack);
         g.SetColor(colors::kWhite);
         for (int i = 0; i < 4; i++) {
-            g.DrawSingleLineText("ADC" + std::to_string(i) + ":" + std::to_string(adc_vals_[i]), 0, i * 8, -1);
+            g.DrawSingleLineText("ADC" + std::to_string(i) + ":" + std::to_string(global_model.adc_vals[i]), 0, i * 8, -1);
         }
     }
 private:
-    int adc_vals_[4] {};
+    TimerTask timer_task_;
 };

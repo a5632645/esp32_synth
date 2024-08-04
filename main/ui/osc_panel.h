@@ -1,18 +1,16 @@
 #pragma once
 
 #include "gui/component.h"
-#include "gui/timer_task.h"
 #include "gui/msg_queue.h"
 
 class OscPanel : public Component {
 public:
-    void PaintSelf(Graphic& g) override {
+    void DrawSelf(Graphic& g) override {
         auto cb = g.GetClipBound();
         auto b = GetLocalBound();
         auto center_y = b.GetCenter().y_;
         auto h = b.h_ / 2;
-        g.Fill(colors::kBlack);
-        g.SetColor(colors::kGreen);
+        g.SetColor(colors::kBlue);
         for (int i = cb.x_; i < cb.x_ + cb.w_; ++ i) {
             auto sample = samples_[i];
             auto top = static_cast<int>(center_y - sample * h);
@@ -21,7 +19,7 @@ public:
                 std::swap(top, bottom);
             g.DrawVeticalLine(i, top, bottom - top);
         }
-
+        g.DrawRect(b);
         if (cb == b)
             finishing_ = true;
     }

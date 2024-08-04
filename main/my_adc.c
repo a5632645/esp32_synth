@@ -26,7 +26,7 @@ int SimpleAdcRead(adc_unit_t unit, adc_channel_t channel) {
     return value;
 }
 
-#define ADC_READ_SCALE (1.0f / (1 << 12))
+#define ADC_READ_SCALE (1.0f / 0.9f / (1 << 12))
 float SimpleAdcReadFloat(adc_unit_t unit, adc_channel_t channel) {
     int value = SimpleAdcRead(unit, channel);
     return value * ADC_READ_SCALE;

@@ -14,7 +14,7 @@ static void I2sAudio_DefaultCallback(float* buffer, int len) {
 static void(*i2s_audio_callback)(float* buffer, int len) = I2sAudio_DefaultCallback;
 
 typedef int16_t BufferTypeT;
-#define BUFFER_TYPE_MAX INT16_MAX / 4
+#define BUFFER_TYPE_MAX 0x2000
 #define BUFFER_LENGTH 1024
 #define BUFFER_SIZE (sizeof(BufferTypeT) * BUFFER_LENGTH)
 
@@ -43,7 +43,10 @@ static void AudioProduceTask(void *args) {
     while (true) {
         i2s_audio_callback(buffer, BUFFER_LENGTH);
         for (int i = 0; i < BUFFER_LENGTH; i++) {
-            write_ptr[i] = buffer[i] * BUFFER_TYPE_MAX;
+            int32_t t = buffer[i] * BUFFER_TYPE_MAX;
+            t = t > BUFFER_TYPE_MAX ? BUFFER_TYPE_MAX : t;
+            t = t < -BUFFER_TYPE_MAX ? -BUFFER_TYPE_MAX : t;
+            write_ptr[i] = t;
         }
         xSemaphoreTake(send_comp_sem, portMAX_DELAY);
     }
@@ -83,5 +86,5 @@ void I2sAudioInit(const I2sAudioConfigT* pconfig) {
     ESP_ERROR_CHECK(i2s_channel_enable(tx_chan));
 
     xTaskCreate(I2sWriteTask, "I2sWriteTask", 2048, NULL, 5, NULL);
-    xTaskCreate(AudioProduceTask, "AudioProduceTask", 2048, NULL, 5, NULL);
+    xTaskCreatePinnedToCore(AudioProduceTask, "AudioProduceTask", 2048, NULL, 5, NULL, 1);
 }

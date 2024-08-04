@@ -6,12 +6,13 @@
 #include <string.h>
 #include "keyboard.h"
 
-static void EmptyCallback(int row, int col, MKKeyStateEnum state) {
+static void EmptyCallback(void* data, int row, int col, MKKeyStateEnum state) {
     ESP_LOGI("keyboard", "row %d col %d state %d", row, col, state);
 }
 
 static dedic_gpio_bundle_handle_t row_handle;
-static void(*callback)(int row, int col, MKKeyStateEnum state) = EmptyCallback;
+static void(*callback)(void* data, int row, int col, MKKeyStateEnum state) = EmptyCallback;
+static void* data = NULL;
 static bool* state = NULL;
 static gpio_num_t* col_gpios = NULL;
 static int col_count = 0;
@@ -60,25 +61,28 @@ static void KeyboardInit(const MatrixKeyboardConfigT* pconfig) {
 
 static void KeyboardTask(void *args) {
     for(;;) {
-        for(int i = 0; i < col_count; i++) {
-            gpio_set_level(col_gpios[i], 1);
-            uint32_t val = dedic_gpio_bundle_read_in(row_handle);
-            for (int j = 0; j < row_count; j++) {
-                bool on = val & (1 << j);
-                int offset = i * row_count + j;
-                if(on && !state[offset]) {
-                    state[offset] = true;
-                    callback(j, i, MK_KEY_DOWN);
-                }
-                else if(!on && state[offset]) {
-                    state[offset] = false;
-                    callback(j, i, MK_KEY_UP);
-                }
-            }
-            gpio_set_level(col_gpios[i], 0);
-        }
-
+        MatrixKeyboard_Tick();
         vTaskDelay(pdMS_TO_TICKS(20));
+    }
+}
+
+void MatrixKeyboard_Tick() {
+    for(int i = 0; i < col_count; i++) {
+        gpio_set_level(col_gpios[i], 1);
+        uint32_t val = dedic_gpio_bundle_read_in(row_handle);
+        for (int j = 0; j < row_count; j++) {
+            bool on = val & (1 << j);
+            int offset = i * row_count + j;
+            if(on && !state[offset]) {
+                state[offset] = true;
+                callback(data, j, i, MK_KEY_DOWN);
+            }
+            else if(!on && state[offset]) {
+                state[offset] = false;
+                callback(data, j, i, MK_KEY_UP);
+            }
+        }
+        gpio_set_level(col_gpios[i], 0);
     }
 }
 
@@ -86,7 +90,9 @@ void MatrixKeyboard_Init(const MatrixKeyboardConfigT* pconfig) {
     if (pconfig->callback != NULL) {
         callback = pconfig->callback;
     }
+    data = pconfig->data;
     KeyboardInit(pconfig);
 
-    xTaskCreate(KeyboardTask, "KeyboardTask", 4096, NULL, 5, NULL);
+    if (pconfig->use_async_task)
+        xTaskCreate(KeyboardTask, "KeyboardTask", 4096, NULL, 5, NULL);
 }

@@ -1,6 +1,11 @@
 #include "component_peer.h"
 #include "component.h"
 
+ComponentPeer::OwnedPtr::~OwnedPtr() {
+    if (delete_layer)
+        delete ptr;
+}
+
 void ComponentPeer::AddInvalidRect(Bound bound) {
     bound = bound.GetIntersectionUncheck(context_->GetBound());
 
@@ -17,7 +22,7 @@ void ComponentPeer::AddInvalidRect(Bound bound) {
         }
 
         auto intersection = b.GetIntersectionUncheck(bound);
-        if (intersection.w_ < 0 && intersection.h_ < 0) // if the bounds are not intersect at least a pixel
+        if (intersection.w_ < 0 || intersection.h_ < 0) // if the bounds are not intersect at least a pixel
             continue;
 
         Bound larger;
@@ -34,7 +39,7 @@ void ComponentPeer::AddInvalidRect(Bound bound) {
 void ComponentPeer::FlushInvalidRects() {
     if (invalid_rects_cache_.empty())
         return;
-    if (owner_ == nullptr)
+    if (component_ == nullptr)
         return;
     if (context_ == nullptr)
         return;
@@ -46,8 +51,8 @@ void ComponentPeer::FlushInvalidRects() {
     int bottom = dirty_aera.y_ + dirty_aera.h_;
     context_->BeginFrame();
     for (auto& b : invalid_rects_) {
-        owner_->InternalPaint(g, b);
-        context_->FlushScreen(b);
+        component_->InternalPaint(g, b);
+        context_->AeraPainted(b);
 
         dirty_aera.x_ = std::min(dirty_aera.x_, b.x_);
         dirty_aera.y_ = std::min(dirty_aera.y_, b.y_);
@@ -60,27 +65,30 @@ void ComponentPeer::FlushInvalidRects() {
     invalid_rects_.clear();
 }
 
-void ComponentPeer::ChangeComponent(Component *owner) {
-    if (owner_ == owner)
+void ComponentPeer::SetComponent(Component *owner) {
+    if (component_ == owner)
         return;
 
-    if (owner_ != nullptr) {
-        owner_->peer_ = nullptr;
-        owner_ = nullptr;
+    if (component_ != nullptr) {
+        component_->peer_ = nullptr;
+        component_ = nullptr;
     }
 
-    owner_ = owner;
+    component_ = owner;
     if (owner != nullptr) {
         if (owner->peer_ != nullptr) {
-            owner->peer_->owner_ = nullptr;
+            owner->peer_->component_ = nullptr;
             owner->peer_->invalid_rects_.clear();
+            owner->peer_->invalid_rects_cache_.clear();
             owner->peer_ = nullptr;
         }
         owner->peer_ = this;
     }
 
+    invalid_rects_.clear();
+    invalid_rects_cache_.clear();
     if (context_ == nullptr)
         return;
-    invalid_rects_.clear();
     owner->SetBound(context_->GetBound());
+    owner->Repaint();
 }
