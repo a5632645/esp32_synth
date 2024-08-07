@@ -23,6 +23,7 @@ set (USER_SOURCES
     "model/global_model.c"
     "model/add_osc.cpp"
     "model/my_fp.s"
+    "model/dr.s"
 )
 
 idf_component_register(SRCS ${GUI_SOURCES} ${DRIVER_SOURCES} ${USER_SOURCES}

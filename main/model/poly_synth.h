@@ -5,7 +5,7 @@
 #endif
 
 template<typename T>
-concept CanBeOsc = requires(T t, float a, int b, float* c) {
+concept CanBeOsc = requires(T t, float a, int b, int16_t* c) {
     t.Init(a);
     t.NoteOn(b, a);
     t.NoteOff(b, a);
@@ -41,7 +41,7 @@ public:
             }
         }
     }
-    void Process(float* buffer, int len) {
+    void Process(int16_t* buffer, int len) {
         std::fill(buffer, buffer + len, 0.0f);
         for (auto& osc : oscs_) {
             osc.Process(buffer, len);

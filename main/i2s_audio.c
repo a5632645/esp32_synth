@@ -4,14 +4,15 @@
 #include <freertos/semphr.h>
 #include "i2s_audio.h"
 
-static void I2sAudio_DefaultCallback(float* buffer, int len) {
+static void I2sAudio_DefaultCallback(void* buffer, int len) {
     static const float scale = 1.0f / RAND_MAX;
+    float *buf = (float*)buffer;
     for(int i = 0; i < len; i++) {
-        buffer[i] = rand() * scale * 2.0f - 1.0f;
+        buf[i] = rand() * scale * 2.0f - 1.0f;
     }
 }
 
-static void(*i2s_audio_callback)(float* buffer, int len) = I2sAudio_DefaultCallback;
+static void(*i2s_audio_callback)(void* buffer, int len) = I2sAudio_DefaultCallback;
 
 typedef int16_t BufferTypeT;
 #define BUFFER_TYPE_MAX 0x2000
@@ -21,45 +22,49 @@ typedef int16_t BufferTypeT;
 static i2s_chan_handle_t tx_chan; // I2S tx channel handler
 static i2s_chan_handle_t rx_chan; // I2S rx channel handler
 
-static SemaphoreHandle_t send_comp_sem = {0};
-BufferTypeT buffer0[BUFFER_LENGTH] = {0};
-BufferTypeT buffer1[BUFFER_LENGTH] = {0};
-BufferTypeT* write_ptr = buffer0;
-BufferTypeT* read_ptr = buffer1;
+// static SemaphoreHandle_t send_comp_sem = {0};
+// BufferTypeT buffer0[BUFFER_LENGTH] = {0};
+// BufferTypeT buffer1[BUFFER_LENGTH] = {0};
+// BufferTypeT* write_ptr = buffer0;
+// BufferTypeT* read_ptr = buffer1;
+BufferTypeT buffer[BUFFER_LENGTH] = {0};
 
 static void I2sWriteTask(void* args) {
     while (true) {
-        i2s_channel_write(tx_chan, read_ptr, sizeof(buffer0), NULL, portMAX_DELAY);
-        BufferTypeT* tmp = write_ptr;
-        write_ptr = read_ptr;
-        read_ptr = tmp;
-        xSemaphoreGive(send_comp_sem);
+        // i2s_channel_write(tx_chan, read_ptr, sizeof(buffer0), NULL, portMAX_DELAY);
+        // BufferTypeT* tmp = write_ptr;
+        // write_ptr = read_ptr;
+        // read_ptr = tmp;
+        // xSemaphoreGive(send_comp_sem);
+        i2s_audio_callback(buffer, BUFFER_LENGTH);
+        i2s_channel_write(tx_chan, buffer, sizeof(buffer), NULL, portMAX_DELAY);
+        vTaskDelay(1);
     }
     vTaskDelete(NULL);
 }
 
-static void AudioProduceTask(void *args) {
-    float* buffer = malloc(sizeof(float) * BUFFER_LENGTH);
-    while (true) {
-        i2s_audio_callback(buffer, BUFFER_LENGTH);
-        for (int i = 0; i < BUFFER_LENGTH; i++) {
-            int32_t t = buffer[i] * BUFFER_TYPE_MAX;
-            t = t > BUFFER_TYPE_MAX ? BUFFER_TYPE_MAX : t;
-            t = t < -BUFFER_TYPE_MAX ? -BUFFER_TYPE_MAX : t;
-            write_ptr[i] = t;
-        }
-        xSemaphoreTake(send_comp_sem, portMAX_DELAY);
-    }
-    free(buffer);
-    vTaskDelete(NULL);
-}
+// static void AudioProduceTask(void *args) {
+//     float* buffer = malloc(sizeof(float) * BUFFER_LENGTH);
+//     while (true) {
+//         i2s_audio_callback(buffer, BUFFER_LENGTH);
+//         for (int i = 0; i < BUFFER_LENGTH; i++) {
+//             int32_t t = buffer[i] * BUFFER_TYPE_MAX;
+//             t = t > BUFFER_TYPE_MAX ? BUFFER_TYPE_MAX : t;
+//             t = t < -BUFFER_TYPE_MAX ? -BUFFER_TYPE_MAX : t;
+//             write_ptr[i] = t;
+//         }
+//         xSemaphoreTake(send_comp_sem, portMAX_DELAY);
+//     }
+//     free(buffer);
+//     vTaskDelete(NULL);
+// }
 
 void I2sAudioInit(const I2sAudioConfigT* pconfig) {
     if(pconfig->callback != NULL) {
         i2s_audio_callback = pconfig->callback;
     }
 
-    vSemaphoreCreateBinary(send_comp_sem);
+    // vSemaphoreCreateBinary(send_comp_sem);
 
     i2s_chan_config_t chan_cfg = I2S_CHANNEL_DEFAULT_CONFIG(I2S_NUM_AUTO, I2S_ROLE_MASTER);
     ESP_ERROR_CHECK(i2s_new_channel(&chan_cfg, &tx_chan, &rx_chan));
@@ -85,6 +90,6 @@ void I2sAudioInit(const I2sAudioConfigT* pconfig) {
     ESP_ERROR_CHECK(i2s_channel_init_std_mode(rx_chan, &std_cfg));
     ESP_ERROR_CHECK(i2s_channel_enable(tx_chan));
 
-    xTaskCreate(I2sWriteTask, "I2sWriteTask", 2048, NULL, 5, NULL);
-    xTaskCreatePinnedToCore(AudioProduceTask, "AudioProduceTask", 2048, NULL, 5, NULL, 1);
+    xTaskCreatePinnedToCore(I2sWriteTask, "I2sWriteTask", 2048, NULL, 5, NULL, 1);
+    // xTaskCreatePinnedToCore(AudioProduceTask, "AudioProduceTask", 2048, NULL, 5, NULL, 1);
 }

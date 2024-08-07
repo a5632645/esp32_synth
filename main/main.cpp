@@ -106,8 +106,13 @@ static TopWindow top_window;
 // ================================================================================
 // audio
 // ================================================================================
-static void AudioCallback(float* buffer, int len) {
+static void AudioCallback(void* buf, int len) {
+    int16_t* buffer = (int16_t*)buf;
     poly_gen.Process(buffer, len);
+    volatile auto a1 = buffer[0];
+    volatile auto a2 = buffer[1];
+    volatile auto b1 = buffer[2];
+    volatile auto b2 = buffer[3];
     auto* osc = (OscPanel*)top_window.GetChildUncheck(1);
     osc->PushSample(buffer, len);
 }
@@ -346,7 +351,7 @@ extern "C" void app_main(void) {
     print_fbundle("Mul" , res);
 
     x = xx;
-    MyFp1_15 t = MYFP_FROM_FLOAT(0.5f);
+    MyFp2_13 t = MYFP_FROM_FLOAT(0.5f);
     MyFp_AddSatBC(&x, &t, &result);
     MyFp_ToFloat(&result, &res);
     print_fbundle("AddSatBC" , res);

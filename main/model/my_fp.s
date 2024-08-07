@@ -5,11 +5,11 @@
 .global MyFp_Mul
 .type MyFp_Mul,@function
 MyFp_Mul:
-    entry a1, 16
+    entry a1, 32
 
     ld.qr q0, a2, 0
     ld.qr q1, a3, 0
-    movi.n a2, 15
+    movi.n a2, 13
     wsr.sar a2
     ee.vmul.s16 q2, q0, q1
     st.qr q2, a4, 0
@@ -21,7 +21,7 @@ MyFp_Mul:
 .global MyFp_AddSat
 .type MyFp_AddSat,@function
 MyFp_AddSat:
-    entry a1, 16
+    entry a1, 32
 
     ld.qr q0, a2, 0
     ld.qr q1, a3, 0
@@ -35,7 +35,7 @@ MyFp_AddSat:
 .global MyFp_SubSat
 .type MyFp_SubSat,@function
 MyFp_SubSat:
-    entry a1, 16
+    entry a1, 32
 
     ld.qr q0, a2, 0
     ld.qr q1, a3, 0
@@ -53,7 +53,7 @@ MyFp_SubSat:
 .global MyFp_AddSatBC
 .type MyFp_AddSatBC,@function
 MyFp_AddSatBC:
-    entry a1, 16
+    entry a1, 32
 
     ld.qr q0, a2, 0
     ee.vldbc.16 q1, a3
@@ -67,7 +67,7 @@ MyFp_AddSatBC:
 .global MyFp_SubSatBC
 .type MyFp_SubSatBC,@function
 MyFp_SubSatBC:
-    entry a1, 16
+    entry a1, 32
 
     ld.qr q0, a2, 0
     ee.vldbc.16 q1, a3
@@ -81,10 +81,10 @@ MyFp_SubSatBC:
 .global MyFp_MulBC
 .type MyFp_MulBC,@function
 MyFp_MulBC:
-    entry a1, 16
+    entry a1, 32
 
     ld.qr q0, a2, 0
-    movi.n a2, 15
+    movi.n a2, 13
     wsr.sar a2
     ee.vldbc.16 q1, a3
     ee.vmul.s16 q2, q0, q1

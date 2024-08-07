@@ -23,13 +23,14 @@ void AddOsc::NoteOff(int note, float velocity) {
     output_gain_ = 0.0f;
 }
 
-void AddOsc::Process(float* buffer, int len) {
+void AddOsc::Process(int16_t* buffer, int len) {
     if (!IsPlaying())
         return;
 
     InternalCrTick(len);
-    for (int i = 0; i < len; ++i)
-        buffer[i] += TickOnce() * output_gain_;
+    ParalleDr_Tick(&drs_[0], buffer, dr_active_, len);
+    // for (int i = 0; i < len; ++i)
+        // buffer[i] += TickOnce() * output_gain_;
 }
 
 bool AddOsc::IsPlaying() const {
@@ -55,18 +56,24 @@ void AddOsc::InternalCrTick(int len) {
         freqs_[i] = note_freq_ * (1.0f + i);
         if (freqs_[i] > pi) {
             num_active_ = i;
-            break;
         }
     }
+    auto plus = (num_active_ & 0x7) == 0 ? 0 : 1;
+    dr_active_ = (num_active_ >> 3) + plus;
 
     std::copy(kSawTable.cbegin(), kSawTable.cend(), std::begin(gains_));
+    MyFp_FromFloatPtr(gains_, &drs_[0].gain_);
 
+    // if (note_oned_)
+    //     for (int i = 0; i < num_active_; ++i)
+    //         sins_[i].Reset(freqs_[i], 0.0f);
+    // else
+    //     for (int i = 0; i < num_active_; ++i)
+    //         sins_[i].SetFreq(freqs_[i]);
     if (note_oned_)
-        for (int i = 0; i < num_active_; ++i)
-            sins_[i].Reset(freqs_[i], 0.0f);
-    else
-        for (int i = 0; i < num_active_; ++i)
-            sins_[i].SetFreq(freqs_[i]);
+        ParalleDr_ResetF(&drs_[0], freqs_, phases_, 1);
+    else 
+        ParalleDr_SetFreqF(&drs_[0], freqs_, 1);
     
     note_oned_ = false;
 }

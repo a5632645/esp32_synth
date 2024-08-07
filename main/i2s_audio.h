@@ -7,7 +7,7 @@ extern "C" {
 #endif
 
 typedef struct {
-    void(*callback)(float* buffer, int len);
+    void(*callback)(void* buffer, int len);
     int i2s_port;
     int sample_rate;
     int bck_gpio;

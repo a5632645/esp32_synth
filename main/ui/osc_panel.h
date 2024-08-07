@@ -24,12 +24,13 @@ public:
             finishing_ = true;
     }
 
-    void PushSample(float* sample, int len) {
+    void PushSample(int16_t* sample, int len) {
         if (!finishing_)
             return;
 
+        constexpr auto inv_max = 1.0f / 0x2000;
         for (int i = 0; i < len; i += 8) {
-            samples_[current_index_++] = sample[i];
+            samples_[current_index_++] = sample[i] * inv_max;
             if (current_index_ >= samples_.size()) {
                 current_index_ = 0;
                 MsgQueue::GetInstance().Push({
