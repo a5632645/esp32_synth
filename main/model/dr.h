@@ -19,7 +19,7 @@ typedef struct {
 #define DR_PARALLE_SIZE (sizeof(MyFpInt128T) / sizeof(MyFp2_13))
 
 extern void ParalleDr_Reset(ParalleDr* dr, MyFpInt128T* freq, MyFpInt128T* phase, uint32_t num);
-static void ParalleDr_ResetF(ParalleDr* dr, float* freq, float* phase, uint32_t num) {
+inline static void ParalleDr_ResetF(ParalleDr* dr, float* freq, float* phase, uint32_t num) {
     MyFpFloatBundleT fb = {};
     MyFpFloatBundleT fb1 = {};
     MyFpFloatBundleT fb2 = {};
@@ -42,8 +42,25 @@ static void ParalleDr_ResetF(ParalleDr* dr, float* freq, float* phase, uint32_t 
         MyFp_FromFloat(&fb4, &dr[i].coeff_);
     }
 }
-extern void ParalleDr_SetFreq(ParalleDr* dr, MyFpInt128T* freq, uint32_t num);
-static void ParalleDr_SetFreqF(ParalleDr* dr, float* freq, uint32_t num) {
+/*
+* there is no vector arithmetic sign16 left shift instruction
+* so we do it by hand
+*/
+extern void __ParalleDr_SetFreq(ParalleDr* dr, MyFpInt128T* fsin, MyFpInt128T* fcos, uint32_t num);
+inline static void ParalleDr_SetFreq(ParalleDr* dr, MyFpInt128T* fsin, MyFpInt128T* fcos, uint32_t num) {
+    __ParalleDr_SetFreq(dr, fsin, fcos, num);
+    for (uint32_t i = 0; i < num; ++i) {
+        dr[i].coeff_.s16[0] = fcos[i].s16[0] << 1;
+        dr[i].coeff_.s16[1] = fcos[i].s16[1] << 1;
+        dr[i].coeff_.s16[2] = fcos[i].s16[2] << 1;
+        dr[i].coeff_.s16[3] = fcos[i].s16[3] << 1;
+        dr[i].coeff_.s16[4] = fcos[i].s16[4] << 1;
+        dr[i].coeff_.s16[5] = fcos[i].s16[5] << 1;
+        dr[i].coeff_.s16[6] = fcos[i].s16[6] << 1;
+        dr[i].coeff_.s16[7] = fcos[i].s16[7] << 1;
+    }
+}
+inline static void ParalleDr_SetFreqF(ParalleDr* dr, float* freq, uint32_t num) {
     MyFpFloatBundleT fb = {};
     MyFpFloatBundleT fb1 = {};
     MyFpInt128T fcos = {};
