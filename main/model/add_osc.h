@@ -28,7 +28,7 @@ private:
     float note_freq_{};
     float output_gain_{};
     float freqs_[kMaxNumHarmonics] {};
-    float gains_[kMaxNumHarmonics] {};
+    float gains_[kMaxNumHarmonics] {0.5f};
     float phases_[kMaxNumHarmonics] {};
     int num_active_ {};
     int dr_active_{};

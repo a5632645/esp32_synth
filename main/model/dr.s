@@ -57,16 +57,15 @@ ParalleDr_Tick:
 
             movi.n a6, 13 // set up SAR for s2.13 fixed point
             wsr.sar a6
-            movi.n a6, 10 // accx 14.26 to 24.16
 
 //  for (int i = 0; i < sample_len; i++)
-_sample_end_loop:
+.sample_tick_loop:
             l32i.n a4, a1, 4 // a4 = dr_num
             l32i.n a2, a1, 8 // a2 = dr_ptr
 
 //          for (int j = 0; j < dr_num; j++)
             ee.zero.accx // accx = 0
-_dr_reduce_loop:
+.dr_reduce_loop:
             ee.vld.128.ip q0, a2, 16 // q0 <= sin0_
             ee.vld.128.ip q1, a2, 16 // q1 <= sin1_
             ee.vld.128.ip q2, a2, 16 // q2 <= cos0_
@@ -76,29 +75,19 @@ _dr_reduce_loop:
 
             ee.vmul.s16.st.incp  q1, a2, q6, q1, q4 // q6 = coeff_ * sin1             , sin1_old => a2(offset = sin0)
             ee.vsubs.s16.st.incp q6, a2, q6, q6, q0 // q6(sin1) = coeff_ * sin1 - sin0, sin1_new => a2(offset = sin1)
-            mv.qr q0, q1 // sin0 = sin1
-            mv.qr q1, q6 // sin1 = coeff_ * sin1 - sin0
 
             ee.vmul.s16.st.incp  q3, a2, q6, q3, q4 // q6 = coeff_ * cos1             , cos1_old => a2(offset = cos0)
             ee.vsubs.s16.st.incp q6, a2, q6, q6, q2 // q6(cos1) = coeff_ * cos1 - cos0, cos1_new => a2(offset = cos1)
             addi a2, a2, 32 // after exec, a2 = next.dr.sin0
-            # mv.qr q2, q3 // cos1 = cos0
-            # mv.qr q3, q6 // cos1 = coeff_ * cos1 - cos0
-
-            # // write back dr values
-            # addi a2, a2, -72
-            # ee.vst.128.ip q0, a5, 16
-            # ee.vst.128.ip q1, a5, 16
-            # ee.vst.128.ip q2, a5, 16
-            # ee.vst.128.ip q3, a5, 48
 
             // accx <= reduce_sum(sin0_ * gain) + accx
-            ee.vmulas.s16.accx q0, q5
+            ee.vmulas.s16.accx q1, q5
 
             addi a4, a4, -1
-            bbsi a4, 0, _dr_reduce_loop // check dr_num != 0?.
+            bnez a4, .dr_reduce_loop // check dr_num != 0?.
 
-            // accx = float * 1 << 26; 14.26 fixed point => 24.16 fixed point
+            // accx = float * 1 << 26
+            // TODO: solve the accx to int16_t problem
             ee.srs.accx a7, a6, 0
             // write low 16 to sample_out and inc a3
             l16si a6, a3, 0
@@ -106,5 +95,6 @@ _dr_reduce_loop:
             s16i a7, a3, 0
             addi a3, a3, 2
 
-            bbsi a5, 0, _sample_end_loop // check sample_len != 1?
+            addi a5, a5, -1
+            bnez a5, .sample_tick_loop // check sample_len != 0?
             retw.n
