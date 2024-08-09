@@ -33,5 +33,5 @@ private:
     int num_active_ {};
     int dr_active_{};
 
-    ParalleDr drs_[kMaxNumHarmonics / DR_PARALLE_SIZE] {};
+    ParalleDr drs_[kMaxNumHarmonics / MYFP_INT128_BATCH_SIZE] {};
 };
