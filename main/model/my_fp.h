@@ -6,20 +6,20 @@
 extern "C" {
 #endif
 
-typedef int16_t MyFpS1_14;
+typedef int16_t MyFpS1_15;
 
-#define MY_FP_SCALE_BIT 13
+#define MY_FP_SCALE_BIT 15
 
 typedef __attribute((aligned(16))) struct {
-    MyFpS1_14 s16[8];
+    MyFpS1_15 s16[8];
 } MyFpInt128T;
-#define MYFP_INT128_BATCH_SIZE (sizeof(MyFpInt128T) / sizeof(MyFpS1_14))
+#define MYFP_INT128_BATCH_SIZE (sizeof(MyFpInt128T) / sizeof(MyFpS1_15))
 
 typedef struct {
     float f32[8];
 } MyFpFloatBundleT;
 
-#define MYFP_FROM_FLOAT(FLOAT_VAL) ((MyFpS1_14)((FLOAT_VAL) * (1 << MY_FP_SCALE_BIT)))
+#define MYFP_FROM_FLOAT(FLOAT_VAL) ((MyFpS1_15)((FLOAT_VAL) * (1 << MY_FP_SCALE_BIT)))
 #define MYFP_TO_FLOAT(MYFP_VAL) ((float)(MYFP_VAL) / (float)(1 << MY_FP_SCALE_BIT))
 
 #define MYFP_FROM_FLOAT_BC(FLOAT_VAL) {MYFP_FROM_FLOAT(FLOAT_VAL), MYFP_FROM_FLOAT(FLOAT_VAL), MYFP_FROM_FLOAT(FLOAT_VAL), MYFP_FROM_FLOAT(FLOAT_VAL), MYFP_FROM_FLOAT(FLOAT_VAL), MYFP_FROM_FLOAT(FLOAT_VAL), MYFP_FROM_FLOAT(FLOAT_VAL), MYFP_FROM_FLOAT(FLOAT_VAL)}
@@ -53,9 +53,9 @@ void MyFp_AddSat(MyFpInt128T* a0, MyFpInt128T* a1, MyFpInt128T* result);
 void MyFp_SubSat(MyFpInt128T* a0, MyFpInt128T* a1, MyFpInt128T* result);
 void MyFp_Mul(MyFpInt128T* a0, MyFpInt128T* a1, MyFpInt128T* result);
 
-void MyFp_AddSatBC(MyFpInt128T* a2, MyFpS1_14* a3, MyFpInt128T* result);
-void MyFp_SubSatBC(MyFpInt128T* a2, MyFpS1_14* a3, MyFpInt128T* result);
-void MyFp_MulBC(MyFpInt128T* a2, MyFpS1_14* a3, MyFpInt128T* result);
+void MyFp_AddSatBC(MyFpInt128T* a2, MyFpS1_15* a3, MyFpInt128T* result);
+void MyFp_SubSatBC(MyFpInt128T* a2, MyFpS1_15* a3, MyFpInt128T* result);
+void MyFp_MulBC(MyFpInt128T* a2, MyFpS1_15* a3, MyFpInt128T* result);
 
 #ifdef __cplusplus
 }

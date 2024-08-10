@@ -25,7 +25,11 @@ set (USER_SOURCES
     "model/global_model.c"
     "model/add_osc.cpp"
     "model/my_fp.s"
-    "model/dr.s"
+    # "model/dr.s"
+    # "model/cordic.s"
+    "model/phase_sin_table.c"
+    "model/freq_sin_table.c"
+    "model/sin2cos_table.c"
 )
 
 idf_component_register(SRCS ${GUI_SOURCES} ${DRIVER_SOURCES} ${USER_SOURCES}

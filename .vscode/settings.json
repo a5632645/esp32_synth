@@ -106,6 +106,6 @@
         "i2s_std.h": "c",
         "my_fp.h": "c"
     },
-    "idf.flashType": "UART",
+    "idf.flashType": "JTAG",
     "idf.gitPathWin": "c:\\Users\\Kawai\\esp\\esp-idf-v5.3-rc1\\tools\\tools\\idf-git\\2.39.2\\cmd\\git.exe"
 }

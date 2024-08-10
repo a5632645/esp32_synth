@@ -3,18 +3,20 @@
 #include <numbers>
 #include <array>
 #include "synth_model.h"
+#include "my_fp.h"
+#include "my_math.h"
 
 constexpr auto pi = std::numbers::pi_v<float>;
 constexpr auto twopi = pi * 2.0f;
 
 void AddOsc::Init(float sample_rate) {
-    inv_sample_rate_ = 1.0f / sample_rate;
+    inv_sample_rate_ = 2.0f / sample_rate;
 }
 
 void AddOsc::NoteOn(int note, float velocity) {
     note_ = note;
     note_oned_ = true;
-    note_freq_ = MyPitchToFreq(note) * inv_sample_rate_ * twopi;
+    note_freq_ = MyPitchToFreq(note) * inv_sample_rate_;
     output_gain_ = velocity;
 }
 
@@ -28,20 +30,9 @@ void AddOsc::Process(int16_t* buffer, int len) {
         return;
 
     InternalCrTick(len);
-    ParalleDr_Tick(&drs_[0], buffer, dr_active_, len);
-    // for (int i = 0; i < len; ++i)
-        // buffer[i] += TickOnce() * output_gain_;
-
-    // auto& dr = drs_[0];
-    // for (int i = 0; i < len; ++i) {
-    //     auto tmp0 = ((dr.coeff_.s16[0] * dr.sin1_.s16[0]) >> 13) - dr.sin0_.s16[0];
-    //     dr.sin0_.s16[0] = dr.sin1_.s16[0];
-    //     dr.sin1_.s16[0] = tmp0;
-    //     tmp0 = ((dr.coeff_.s16[0] * dr.cos1_.s16[0]) >> 13) - dr.cos0_.s16[0];
-    //     dr.cos0_.s16[0] = dr.cos1_.s16[0];
-    //     dr.cos1_.s16[0] = tmp0;
-    //     buffer[i] = (dr.sin0_.s16[0] * dr.gain_.s16[0]) >> 13;
-    // }
+    for (int i = 0; i < len; ++i) {
+        Coridc_Tick(oscs_, 1, buffer + i);
+    }
 }
 
 bool AddOsc::IsPlaying() const {
@@ -72,13 +63,7 @@ void AddOsc::InternalCrTick(int len) {
     auto plus = (num_active_ & 0x7) == 0 ? 0 : 1;
     dr_active_ = (num_active_ >> 3) + plus;
 
-    // std::copy(kSawTable.cbegin(), kSawTable.cend(), std::begin(gains_));
-    MyFp_FromFloatPtr(gains_, &drs_[0].gain_);
-
-    if (note_oned_)
-        ParalleDr_ResetF(&drs_[0], freqs_, phases_, 1);
-    // else 
-    //     ParalleDr_SetFreqF(&drs_[0], freqs_, 1);
+    std::copy(kSawTable.cbegin(), kSawTable.cend(), std::begin(gains_));
     
     note_oned_ = false;
 }

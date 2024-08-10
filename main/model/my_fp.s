@@ -9,7 +9,7 @@ MyFp_Mul:
 
     ld.qr q0, a2, 0
     ld.qr q1, a3, 0
-    movi.n a2, 13
+    movi.n a2, 15
     wsr.sar a2
     ee.vmul.s16 q2, q0, q1
     st.qr q2, a4, 0
@@ -84,7 +84,7 @@ MyFp_MulBC:
     entry a1, 32
 
     ld.qr q0, a2, 0
-    movi.n a2, 13
+    movi.n a2, 15
     wsr.sar a2
     ee.vldbc.16 q1, a3
     ee.vmul.s16 q2, q0, q1

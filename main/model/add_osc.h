@@ -5,8 +5,7 @@
 #endif
 
 #include "synth_model.h"
-#include "dr.h"
-#include "my_fp.h"
+#include "cordic.h"
 
 class AddOsc {
 public:
@@ -28,10 +27,10 @@ private:
     float note_freq_{};
     float output_gain_{};
     float freqs_[kMaxNumHarmonics] {};
-    float gains_[kMaxNumHarmonics] {0.5f};
+    float gains_[kMaxNumHarmonics] {};
     float phases_[kMaxNumHarmonics] {};
     int num_active_ {};
     int dr_active_{};
 
-    ParalleDr drs_[kMaxNumHarmonics / MYFP_INT128_BATCH_SIZE] {};
+    CoridcData oscs_[kMaxNumHarmonics / 8] {};
 };

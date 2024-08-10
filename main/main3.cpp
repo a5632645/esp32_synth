@@ -3,6 +3,14 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <numbers>
+#include <string>
+#include "model/cordic.h"
+#include "model/my_fp.h"
+
+#include "gui/msg_queue.h"
+#include "gui/component_peer.h"
+#include "gui/component.h"
+#include "st7735_ll_contex.h"
 
 inline static constexpr int16_t P2FP(float x) {
     return (int16_t)(x * (1 << 14));
@@ -52,6 +60,79 @@ static void TwoTask(void* arg) {
     }
 }
 
+static void TwoTask2(void*) {
+    CoridcData test;
+
+    CoridcResetStruct s {
+        .phase = {
+            MYFP_FROM_FLOAT(0.0f),
+            MYFP_FROM_FLOAT(0.0f),
+            MYFP_FROM_FLOAT(0.0f),
+            MYFP_FROM_FLOAT(0.0f),
+            MYFP_FROM_FLOAT(0.0f),
+            MYFP_FROM_FLOAT(0.0f),
+            MYFP_FROM_FLOAT(0.0f),
+            MYFP_FROM_FLOAT(0.0f)
+        },
+        .freq = {
+            MYFP_FROM_FLOAT(0.01f),
+            MYFP_FROM_FLOAT(0.02f),
+            MYFP_FROM_FLOAT(0.03f),
+            MYFP_FROM_FLOAT(0.04f),
+            MYFP_FROM_FLOAT(0.05f),
+            MYFP_FROM_FLOAT(0.06f),
+            MYFP_FROM_FLOAT(0.07f),
+            MYFP_FROM_FLOAT(0.08f)
+        },
+    };
+    Coridc_Reset(&test, 1, &s);
+
+    // ll driver init
+    static St7735LLContext ll_context;
+    spi_master_init(&ll_context.dev, 2, 1, 41, 40, 42);
+    lcdInit(&ll_context.dev, 128, 160, 0, 0);
+    lcdDisplayOn(&ll_context.dev);
+
+    // gui init
+    Graphic g{ll_context};
+    g.SetClipBoundGlobal(ll_context.GetBound());
+    g.SetComponentBound(ll_context.GetBound());
+    g.SetColor(colors::kWhite);
+
+    int x = 0;
+    int scale = ll_context.kHeight / 2;
+
+    CoridcFreqStruct freq {};
+    MyPoint p {};
+    for (;;) {
+        // freq.freq[0] = (freq.freq[0] + 1) & 32767;
+        // Coridc_SetFreq(&test, 1, &freq);
+        Coridc_Tick(&test, 1, nullptr);
+
+        auto t = MYFP_TO_FLOAT(test.y0[0]);
+        auto y = t * scale + scale;
+
+        MyPoint pp {x, (int)y};
+        g.DrawLine(p, pp);
+        p = pp;
+
+        // g.SetPixel({x, (int)y});
+        ll_context.EndFrame(ll_context.GetBound());
+
+        ++x;
+        if (x >= ll_context.kWidth) {
+            x = 0;
+            g.Fill(colors::kBlack);
+            g.DrawSingleLineText(std::to_string(freq.freq[0]), 0, 0);
+        }
+
+        printf("%f\n", t);
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
+    vTaskDelete(nullptr);
+}
+
 extern "C" void app_main() {
-    xTaskCreate(TwoTask, "TwoTask", 4096, nullptr, 5, nullptr);
+    // xTaskCreate(TwoTask, "TwoTask", 4096, nullptr, 5, nullptr);
+    xTaskCreate(TwoTask2, "TwoTask", 4096, nullptr, 5, nullptr);
 }

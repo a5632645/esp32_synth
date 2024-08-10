@@ -7,16 +7,16 @@
 #include <cmath>
 
 template<typename T>
-inline static T MySin(T x) {
+inline static constexpr T MySin(T x) {
     return std::sin(x);
 }
 
 template<typename T>
-inline static T MyCos(T x) {
+inline static constexpr T MyCos(T x) {
     return std::cos(x);
 }
 
 template<typename T>
-inline static T MyPitchToFreq(T pitch) {
+inline static constexpr T MyPitchToFreq(T pitch) {
     return std::exp2(pitch / 12.0f) * 8.1758f;
 }

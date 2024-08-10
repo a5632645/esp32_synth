@@ -66,7 +66,7 @@ inline static void ParalleDr_SetFreqF(ParalleDr* dr, float* freq, uint32_t num) 
     MyFpInt128T fsin = {};
     MyFpInt128T tmp0 = {};
     MyFpInt128T tmp1 = {};
-    MyFpS1_14 two = MYFP_FROM_FLOAT(2.0f);
+    MyFpS1_15 two = MYFP_FROM_FLOAT(2.0f);
     for (uint32_t i = 0; i < num; ++i) {
         for (int j = 0; j < 8; ++j) {
             fb.f32[j] = MySin(*freq);
