@@ -30,9 +30,9 @@ void AddOsc::Process(int16_t* buffer, int len) {
         return;
 
     InternalCrTick(len);
-    for (int i = 0; i < len; ++i) {
-        Coridc_Tick(oscs_, 1, buffer + i);
-    }
+    // for (int i = 0; i < len; ++i) {
+    //     Coridc_Tick(oscs_, 1, buffer + i);
+    // }
 }
 
 bool AddOsc::IsPlaying() const {

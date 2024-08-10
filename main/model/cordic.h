@@ -12,6 +12,7 @@ typedef struct {
     int16_t x0[8];
     int16_t y0[8];
     int16_t half_coef[8];
+    int16_t gain[8];
 } __attribute__((aligned(16))) CoridcData;
 
 typedef struct {
@@ -121,30 +122,40 @@ inline static void Coridc_SetFreq(CoridcData* ptr, uint32_t len, CoridcFreqStruc
     }
 }
 
-inline static void Coridc_Tick(CoridcData* ptr, uint32_t len, int16_t* out) 
+typedef int32_t MyFpS7_24;
+inline static void Coridc_Tick(CoridcData* ptr, uint32_t len, MyFpS7_24* out) 
 {
     asm volatile 
     (
-        "movi.n a5, 14\n\r" // half_coeff * 2, >>14 turns into >>13
+        "movi.n a5, 14\n\r" // half_coeff * 2, >>15 turns into >>14
         "wsr.sar a5\n\r"
+        "ee.zero.accx\n\r"
 
-        ".loop:\n\r"
-
+        ".dr_tick_loop:\n\r"
         "ee.vld.128.ip q0, %[p], 16\n\r"  // q0 <= curr.x0
         "ee.vld.128.ip q1, %[p], 16\n\r"  // q1 <= curr.y0
-        "ee.vld.128.ip q2, %[p], -32\n\r" // q2 <= half_coeff, ptr = curr.x0
+        "ee.vld.128.ip q2, %[p], 16\n\r"  // q2 <= half_coeff, ptr = curr.x0
+        "ee.vld.128.ip q5, %[p], -48\n\r" // q5 <= curr.gain, ptr = curr.x0
+
+        "ee.vmulas.s16.accx q5, q1\n\r" // accx += gain * y0
+
         "ee.vmul.s16 q3, q2, q1\n\r"
         "ee.vsubs.s16 q4, q0, q3\n\r"     // q4 <= curr.x0 - half_coeff * curr.y0
         "mv.qr q0, q4\n\r"                // q0 <= new_x0
-        "ee.vmul.s16.st.incp  q4, %[p], q3, q2, q0\n\r" // ptr = curr.y0
-        "ee.vadds.s16 q4, q1, q3\n\r"
-        "ee.vst.128.ip q4, %[p], 16\n\r" // ptr = next.x0
+        "ee.vmul.s16.st.incp q4, %[p], q3, q2, q0\n\r" // ptr = curr.y0
+        "ee.vadds.s16 q4, q1, q3\n\r"     // q4 <= new_y0
+        "ee.vst.128.ip q4, %[p], 48\n\r"  // ptr = next.x0
 
-        "addi.n %[num], %[num], -1\n\r"
-        "bnez %[num], .loop\n\r"
+        "addi %[num], %[num], -1\n\r"
+        "bnez %[num], .dr_tick_loop\n\r"
+
+        // accx contains float << 30
+        "movi.n a5, 1\n\r"
+        "ee.srs.accx a6, a5, 0\n\r" // sum <= a6
+        "s32i.n a6, %[o], 0\n\r"
         :
-        :[num]"r"(len), [p]"r"(ptr)
-        :"a5"
+        :[num]"r"(len), [p]"r"(ptr), [o]"r"(out)
+        :"a5", "a6"
     );
 }
 

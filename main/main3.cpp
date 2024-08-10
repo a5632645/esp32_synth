@@ -4,6 +4,7 @@
 #include <freertos/task.h>
 #include <numbers>
 #include <string>
+#include <esp_timer.h>
 #include "model/cordic.h"
 #include "model/my_fp.h"
 
@@ -61,31 +62,26 @@ static void TwoTask(void* arg) {
 }
 
 static void TwoTask2(void*) {
-    CoridcData test;
+    constexpr uint32_t num = 4096;
+    static CoridcData* test = (CoridcData*)heap_caps_aligned_calloc(16, num, sizeof(CoridcData), MALLOC_CAP_DEFAULT);
+    for (int i = 0; i < num; ++i) 
+    {
+        for (int j = 0; j < 8; ++j) 
+        {
+            test[i].gain[j] = MYFP_FROM_FLOAT(0.9f / (j + 1.0f + 8.0f * i));
+        }
+    }
 
-    CoridcResetStruct s {
-        .phase = {
-            MYFP_FROM_FLOAT(0.0f),
-            MYFP_FROM_FLOAT(0.0f),
-            MYFP_FROM_FLOAT(0.0f),
-            MYFP_FROM_FLOAT(0.0f),
-            MYFP_FROM_FLOAT(0.0f),
-            MYFP_FROM_FLOAT(0.0f),
-            MYFP_FROM_FLOAT(0.0f),
-            MYFP_FROM_FLOAT(0.0f)
-        },
-        .freq = {
-            MYFP_FROM_FLOAT(0.01f),
-            MYFP_FROM_FLOAT(0.02f),
-            MYFP_FROM_FLOAT(0.03f),
-            MYFP_FROM_FLOAT(0.04f),
-            MYFP_FROM_FLOAT(0.05f),
-            MYFP_FROM_FLOAT(0.06f),
-            MYFP_FROM_FLOAT(0.07f),
-            MYFP_FROM_FLOAT(0.08f)
-        },
-    };
-    Coridc_Reset(&test, 1, &s);
+    static CoridcResetStruct* reset = (CoridcResetStruct*)heap_caps_aligned_calloc(16, num, sizeof(CoridcResetStruct), MALLOC_CAP_DEFAULT);
+    for (int i = 0; i < num; ++i)
+    {
+        for (int j = 0; j < 8; ++j)
+        {
+            reset[i].freq[j] = j + 1 + 8 * i;
+            reset[i].phase[j] = 0;
+        }
+    }
+    Coridc_Reset(test, num, reset);
 
     // ll driver init
     static St7735LLContext ll_context;
@@ -97,24 +93,38 @@ static void TwoTask2(void*) {
     Graphic g{ll_context};
     g.SetClipBoundGlobal(ll_context.GetBound());
     g.SetComponentBound(ll_context.GetBound());
-    g.SetColor(colors::kWhite);
 
     int x = 0;
     int scale = ll_context.kHeight / 2;
 
     CoridcFreqStruct freq {};
     MyPoint p {};
-    for (;;) {
+    MyPoint p2 {};
+
+    auto tick_begin = esp_timer_get_time();
+    for (;;) 
+    {
         // freq.freq[0] = (freq.freq[0] + 1) & 32767;
         // Coridc_SetFreq(&test, 1, &freq);
-        Coridc_Tick(&test, 1, nullptr);
+        int32_t tmp = 0;
+        Coridc_Tick(test, num, &tmp);
 
-        auto t = MYFP_TO_FLOAT(test.y0[0]);
+        auto tick_consumed = esp_timer_get_time() - tick_begin;
+
+        auto t = MYFP_TO_FLOAT(test[num / 2].y0[0]);
         auto y = t * scale + scale;
 
         MyPoint pp {x, (int)y};
+        g.SetColor(colors::kWhite);
         g.DrawLine(p, pp);
         p = pp;
+
+        g.SetColor(colors::kRed);
+        t = (float)tmp / INT32_MAX;
+        y = t * scale + scale;
+        MyPoint pp2 {x, (int)y};
+        g.DrawLine(p2, pp2);
+        p2 = pp2;
 
         // g.SetPixel({x, (int)y});
         ll_context.EndFrame(ll_context.GetBound());
@@ -123,11 +133,11 @@ static void TwoTask2(void*) {
         if (x >= ll_context.kWidth) {
             x = 0;
             g.Fill(colors::kBlack);
-            g.DrawSingleLineText(std::to_string(freq.freq[0]), 0, 0);
+            g.DrawSingleLineText(std::to_string(tick_consumed) + "us", 0, 0);
         }
 
-        printf("%f\n", t);
         vTaskDelay(pdMS_TO_TICKS(10));
+        tick_begin = esp_timer_get_time();
     }
     vTaskDelete(nullptr);
 }
