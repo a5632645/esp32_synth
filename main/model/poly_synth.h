@@ -42,7 +42,7 @@ public:
         }
     }
     void Process(int16_t* buffer, int len) {
-        std::fill(buffer, buffer + len, 0.0f);
+        std::fill(buffer, buffer + len, 0);
         for (auto& osc : oscs_) {
             osc.Process(buffer, len);
         }

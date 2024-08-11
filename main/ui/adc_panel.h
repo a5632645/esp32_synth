@@ -19,7 +19,7 @@ public:
         g.Fill(colors::kBlack);
         g.SetColor(colors::kWhite);
         for (int i = 0; i < 4; i++) {
-            g.DrawSingleLineText("ADC" + std::to_string(i) + ":" + std::to_string(global_model.adc_vals[i]), 0, i * 8, -1);
+            g.DrawSingleLineText("ADC" + std::to_string(i) + ":" + std::to_string(global_model.adc_vals[i]), 0, i * 8);
         }
     }
 private:

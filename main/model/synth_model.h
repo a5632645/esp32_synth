@@ -4,12 +4,16 @@
 extern "C" {
 #endif
 
+#include <stdint.h>
+
 typedef struct {
-    float adc_vals[4];
-    int inharmonic_mode;
-    int phaser_mode;
-    int pluck_mode;
-    int random_amp_mode;
+    uint8_t adc_vals[4]; // 0 ~ 255
+    uint8_t inharmonic_mode;
+    uint8_t phaser_mode;
+    uint8_t pluck_mode;
+    uint8_t random_amp_mode;
+    
+    uint8_t timber;
 
     int curr_octave;
 } SynthModel;

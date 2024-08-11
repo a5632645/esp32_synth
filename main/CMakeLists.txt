@@ -18,9 +18,9 @@ set (DRIVER_SOURCES
     "keyboard.c"
 )
 set (USER_SOURCES
-    # "main.cpp"
+    "main.cpp"
     # "main2.cpp"
-    "main3.cpp"
+    # "main3.cpp"
     "st7735_ll_contex.cpp"
     "model/global_model.c"
     "model/add_osc.cpp"

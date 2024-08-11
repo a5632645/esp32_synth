@@ -19,7 +19,7 @@ static const int SPI_Data_Mode = 1;
 static const int SPI_Frequency = SPI_MASTER_FREQ_20M;
 //static const int SPI_Frequency = SPI_MASTER_FREQ_26M;
 //static const int SPI_Frequency = SPI_MASTER_FREQ_40M;
-//static const int SPI_Frequency = SPI_MASTER_FREQ_80M;
+// static const int SPI_Frequency = SPI_MASTER_FREQ_80M;
 
 
 void spi_master_init(ST7735_t * dev, int16_t GPIO_MOSI, int16_t GPIO_SCLK, int16_t GPIO_CS, int16_t GPIO_DC, int16_t GPIO_RESET)
