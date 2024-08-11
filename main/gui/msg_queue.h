@@ -52,7 +52,7 @@ public:
      * @return true if success, false if queue is full
      */
     bool PushUnlock(Message message) {
-        if (messages_.size() == kMaxMessageCount)
+        if (messages_.size() >= kMaxMessageCount || !message.handler)
             return false;
 
         messages_.emplace_back(std::move(message));

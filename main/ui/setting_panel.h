@@ -12,13 +12,13 @@ public:
 private:
     class OptionComponent : public Component {
     public:
-        OptionComponent(int* value, std::string_view title, std::vector<std::string_view> options) :
+        OptionComponent(uint8_t* value, std::string_view title, std::vector<std::string_view> options) :
             value_(value), title_(title), options_(std::move(options)) {}
 
         void DrawSelf(Graphic& g) override;
         void OnEventGet(const MyEvent& e) override;
     private:
-        int* value_ = nullptr;
+        uint8_t* value_ = nullptr;
         const std::string_view title_;
         const std::vector<std::string_view> options_;
     };
@@ -27,6 +27,4 @@ private:
 
     uint16_t curr_setting_index = 0;
     std::vector<OptionComponent> comps_;
-
-    int test_ {};
 };

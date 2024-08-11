@@ -2,6 +2,7 @@
 
 #include <numbers>
 #include <array>
+#include <esp_log.h>
 #include "synth_model.h"
 #include "my_fp.h"
 #include "my_math.h"
@@ -37,7 +38,7 @@ void AddOsc::Process(int16_t* buffer, int len) {
         return;
 
     InternalCrTick(len);
-    if (num_active_ == 0)
+    if (cordic_active_ == 0)
         return;
 
     for (int i = 0; i < len; ++i) {
@@ -60,8 +61,8 @@ void AddOsc::InternalCrTick(int len) {
 
     if (num_active_ != old_num_active_) {
         old_num_active_ = num_active_;
-        auto plus = (num_active_ & 0x7) == 0 ? 0 : 1;
-        cordic_active_ = (num_active_ >> 3) + plus;
+        auto plus = (num_active_ & 0b111u) == 0u ? 0u : 1u;
+        cordic_active_ = (num_active_ >> 3u) + plus;
         // clear gain
         std::fill(gains_ + num_active_, gains_ + kMaxNumHarmonics, 0);
     }
@@ -80,28 +81,28 @@ void AddOsc::InternalCrTick(int len) {
 }
 
 void AddOsc::InternalFreq(int len) {
-    if (note_prev_ == note_curr_) 
+    if (note_prev_ == note_curr_ && global_model.inharmonic_mode == model_.inharmonic_mode) 
         return;
     note_prev_ = note_curr_;
+    model_.inharmonic_mode = global_model.inharmonic_mode;
     freq_changed_ = true;
 
     uint32_t freq_inc = static_cast<uint32_t>(note_freq_ * 32768);
-    uint32_t freq = freq_inc;
     constexpr uint32_t kMaxFreq = 30000;
 
     num_active_ = 0;
-    for (int i = 0; i < kNumCordic; ++i) {
-        for (int j = 0; j < 8; ++j) {
-            if (freq > kMaxFreq)
-                break;
-
-            ++num_active_;
-            cordic_params_[i].freq[j] = static_cast<int16_t>(freq);
-            freq += freq_inc;
-        }
-
-        if (freq > kMaxFreq)
-            break;
+    switch (model_.inharmonic_mode) {
+    case kInharmonicMode_Linear:
+        _InharmonicLinear(freq_inc, kMaxFreq);
+        break;
+    case kInharmonicMode_Octave:
+        _InharmonicOctave(freq_inc, kMaxFreq);
+        break;
+    case kInharmonicMode_String:
+        _InharmonicString(freq_inc, kMaxFreq);
+        break;
+    default:
+        break;
     }
 }
 
@@ -119,5 +120,56 @@ void AddOsc::InternalGain(int len) {
         if (model_.timber == 0) {
             std::copy(kSaw.begin(), kSaw.begin() + num_active_, gains_);
         }
+    }
+}
+
+void AddOsc::_InharmonicLinear(uint32_t freq_inc, uint32_t max_freq) {
+    uint32_t freq = freq_inc;
+    for (int i = 0; i < kNumCordic; ++i) {
+        for (int j = 0; j < 8; ++j) {
+            if (freq > max_freq)
+                break;
+
+            ++num_active_;
+            cordic_params_[i].freq[j] = static_cast<int16_t>(freq);
+            freq += freq_inc;
+        }
+
+        if (freq > max_freq)
+            break;
+    }
+}
+
+void AddOsc::_InharmonicOctave(uint32_t freq_inc, uint32_t max_freq) {
+    uint32_t freq = freq_inc;
+    for (int i = 0; i < kNumCordic; ++i) {
+        for (int j = 0; j < 8; ++j) {
+            if (freq > max_freq)
+                break;
+
+            ++num_active_;
+            cordic_params_[i].freq[j] = static_cast<int16_t>(freq);
+            freq <<= 1;
+        }
+
+        if (freq > max_freq)
+            break;
+    }
+}
+
+void AddOsc::_InharmonicString(uint32_t freq_inc, uint32_t max_freq) {
+    uint32_t freq = freq_inc;
+    for (int i = 0; i < kNumCordic; ++i) {
+        for (int j = 0; j < 8; ++j) {
+            if (freq > max_freq)
+                break;
+
+            ++num_active_;
+            cordic_params_[i].freq[j] = static_cast<int16_t>(freq);
+            freq <<= 1;
+        }
+
+        if (freq > max_freq)
+            break;
     }
 }

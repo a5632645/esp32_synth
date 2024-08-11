@@ -28,15 +28,19 @@ private:
     void InternalFreq(int len);
     void InternalGain(int len);
 
+    void _InharmonicLinear(uint32_t freq_inc, uint32_t max_freq);
+    void _InharmonicOctave(uint32_t freq_inc, uint32_t max_freq);
+    void _InharmonicString(uint32_t freq_inc, uint32_t max_freq);
+
     float inv_sample_rate_{};
     bool note_oned_{false};
     float note_freq_{};
     float output_gain_{};
     int note_curr_ { -1 };
     int note_prev_ { -1 };
-    int num_active_ {};
-    int old_num_active_ { -1 };
-    int cordic_active_{};
+    uint32_t num_active_ {};
+    uint32_t old_num_active_ { -1 };
+    uint32_t cordic_active_{};
     bool freq_changed_{};
 
     alignas(16) MyFpS0_15 gains_[kMaxNumHarmonics];

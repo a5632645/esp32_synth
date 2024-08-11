@@ -243,5 +243,5 @@ extern "C" void app_main(void) {
     UartMidi_Init(&midi_config);
 
     xTaskCreate(AdcTask, "AdcTask", 4096, NULL, 5, NULL);
-    xTaskCreate(MyLcdTask, "LcdTask", 4096, NULL, 4, NULL);
+    xTaskCreate(MyLcdTask, "LcdTask", 8192, NULL, 4, NULL);
 }

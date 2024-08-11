@@ -90,6 +90,6 @@ void I2sAudioInit(const I2sAudioConfigT* pconfig) {
     ESP_ERROR_CHECK(i2s_channel_init_std_mode(rx_chan, &std_cfg));
     ESP_ERROR_CHECK(i2s_channel_enable(tx_chan));
 
-    xTaskCreatePinnedToCore(I2sWriteTask, "I2sWriteTask", 2048, NULL, 5, NULL, 1);
+    xTaskCreatePinnedToCore(I2sWriteTask, "I2sWriteTask", 8192, NULL, 5, NULL, 1);
     // xTaskCreatePinnedToCore(AudioProduceTask, "AudioProduceTask", 2048, NULL, 5, NULL, 1);
 }

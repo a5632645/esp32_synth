@@ -1,15 +1,24 @@
 #include "setting_panel.h"
 
 #include "my_events.h"
+#include "../model/synth_model.h"
 
 SettingPanel::SettingPanel() {
     using namespace std::string_view_literals;
 
     comps_.reserve(4);
-    comps_.emplace_back(&test_, "test"sv, std::vector{"a"sv, "b"sv, "c"sv});
-    comps_.emplace_back(&test_, "test2"sv, std::vector{"d"sv, "e"sv, "f"sv, "g"sv});
-    comps_.emplace_back(&test_, "test3"sv, std::vector{"h"sv, "i"sv, "j"sv, "k"sv});
-    comps_.emplace_back(&test_, "test4"sv, std::vector{"l"sv, "m"sv, "n"sv, "o"sv});
+    comps_.emplace_back(&global_model.inharmonic_mode,
+        "inharm"sv,
+        std::vector{"linear"sv, "octave"sv, "string"sv});
+    comps_.emplace_back(&global_model.phaser_mode,
+        "phaser"sv,
+        std::vector{"d"sv, "e"sv, "f"sv, "g"sv});
+    comps_.emplace_back(&global_model.pluck_mode,
+        "pluck"sv,
+        std::vector{"h"sv, "i"sv, "j"sv, "k"sv});
+    comps_.emplace_back(&global_model.random_amp_mode,
+        "randomAmp"sv,
+        std::vector{"l"sv, "m"sv, "n"sv, "o"sv});
 
     for (auto& comp : comps_)
         AddChild(&comp);
@@ -85,6 +94,8 @@ void SettingPanel::OptionComponent::DrawSelf(Graphic& g) {
 
     g.SetColor(colors::kWhite);
     g.DrawSingleLineText(title_, 0, 0);
+
+    g.SetColor(colors::kGreen);
     g.DrawSingleLineText(options_[*value_], 0, 0, GetLocalBound().w_, MyJustification::kRight);
 }
 
@@ -98,14 +109,14 @@ void SettingPanel::OptionComponent::OnEventGet(const MyEvent& e) {
         GetParent()->Repaint();
         break;
     case events::kButton14: // up
-        if (*value_ == 0)
+        if (*value_ == 0u)
             break;
 
         --(*value_);
         Repaint();
         break;
     case events::kButton16: // down
-        if (*value_ == static_cast<uint16_t>(options_.size() - 1))
+        if (*value_ == static_cast<uint8_t>(options_.size() - 1))
             break;
 
         ++(*value_);
