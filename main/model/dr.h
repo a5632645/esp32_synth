@@ -26,41 +26,41 @@ inline static void MY_CONSTEXPR Dr_Reset(DrData* ptr, uint32_t num, MyFpS0_15* f
         ptr[i].half_coeff[6] = Freq_FpCos(freq[6 + offset]);
         ptr[i].half_coeff[7] = Freq_FpCos(freq[7 + offset]);
 
-        ptr[i].sin0[0] = Freq_FpSin(phase[0 + offset]);
-        ptr[i].sin0[1] = Freq_FpSin(phase[1 + offset]);
-        ptr[i].sin0[2] = Freq_FpSin(phase[2 + offset]);
-        ptr[i].sin0[3] = Freq_FpSin(phase[3 + offset]);
-        ptr[i].sin0[4] = Freq_FpSin(phase[4 + offset]);
-        ptr[i].sin0[5] = Freq_FpSin(phase[5 + offset]);
-        ptr[i].sin0[6] = Freq_FpSin(phase[6 + offset]);
-        ptr[i].sin0[7] = Freq_FpSin(phase[7 + offset]);
+        ptr[i].sin0[0] = Phase_FpSin(phase[0 + offset]);
+        ptr[i].sin0[1] = Phase_FpSin(phase[1 + offset]);
+        ptr[i].sin0[2] = Phase_FpSin(phase[2 + offset]);
+        ptr[i].sin0[3] = Phase_FpSin(phase[3 + offset]);
+        ptr[i].sin0[4] = Phase_FpSin(phase[4 + offset]);
+        ptr[i].sin0[5] = Phase_FpSin(phase[5 + offset]);
+        ptr[i].sin0[6] = Phase_FpSin(phase[6 + offset]);
+        ptr[i].sin0[7] = Phase_FpSin(phase[7 + offset]);
 
-        ptr[i].sin1[0] = Freq_FpSin(phase[0 + offset] + (freq[0 + offset] >> 1));
-        ptr[i].sin1[1] = Freq_FpSin(phase[1 + offset] + (freq[1 + offset] >> 1));
-        ptr[i].sin1[2] = Freq_FpSin(phase[2 + offset] + (freq[2 + offset] >> 1));
-        ptr[i].sin1[3] = Freq_FpSin(phase[3 + offset] + (freq[3 + offset] >> 1));
-        ptr[i].sin1[4] = Freq_FpSin(phase[4 + offset] + (freq[4 + offset] >> 1));
-        ptr[i].sin1[5] = Freq_FpSin(phase[5 + offset] + (freq[5 + offset] >> 1));
-        ptr[i].sin1[6] = Freq_FpSin(phase[6 + offset] + (freq[6 + offset] >> 1));
-        ptr[i].sin1[7] = Freq_FpSin(phase[7 + offset] + (freq[7 + offset] >> 1));
+        ptr[i].sin1[0] = Phase_FpSin(phase[0 + offset] + (freq[0 + offset] >> 1));
+        ptr[i].sin1[1] = Phase_FpSin(phase[1 + offset] + (freq[1 + offset] >> 1));
+        ptr[i].sin1[2] = Phase_FpSin(phase[2 + offset] + (freq[2 + offset] >> 1));
+        ptr[i].sin1[3] = Phase_FpSin(phase[3 + offset] + (freq[3 + offset] >> 1));
+        ptr[i].sin1[4] = Phase_FpSin(phase[4 + offset] + (freq[4 + offset] >> 1));
+        ptr[i].sin1[5] = Phase_FpSin(phase[5 + offset] + (freq[5 + offset] >> 1));
+        ptr[i].sin1[6] = Phase_FpSin(phase[6 + offset] + (freq[6 + offset] >> 1));
+        ptr[i].sin1[7] = Phase_FpSin(phase[7 + offset] + (freq[7 + offset] >> 1));
         
-        ptr[i].cos0[0] = Freq_FpCos(phase[0 + offset]);
-        ptr[i].cos0[1] = Freq_FpCos(phase[1 + offset]);
-        ptr[i].cos0[2] = Freq_FpCos(phase[2 + offset]);
-        ptr[i].cos0[3] = Freq_FpCos(phase[3 + offset]);
-        ptr[i].cos0[4] = Freq_FpCos(phase[4 + offset]);
-        ptr[i].cos0[5] = Freq_FpCos(phase[5 + offset]);
-        ptr[i].cos0[6] = Freq_FpCos(phase[6 + offset]);
-        ptr[i].cos0[7] = Freq_FpCos(phase[7 + offset]);
+        ptr[i].cos0[0] = Phase_FpCos(phase[0 + offset]);
+        ptr[i].cos0[1] = Phase_FpCos(phase[1 + offset]);
+        ptr[i].cos0[2] = Phase_FpCos(phase[2 + offset]);
+        ptr[i].cos0[3] = Phase_FpCos(phase[3 + offset]);
+        ptr[i].cos0[4] = Phase_FpCos(phase[4 + offset]);
+        ptr[i].cos0[5] = Phase_FpCos(phase[5 + offset]);
+        ptr[i].cos0[6] = Phase_FpCos(phase[6 + offset]);
+        ptr[i].cos0[7] = Phase_FpCos(phase[7 + offset]);
 
-        ptr[i].cos1[0] = Freq_FpCos(phase[0 + offset] + (freq[0 + offset] >> 1));
-        ptr[i].cos1[1] = Freq_FpCos(phase[1 + offset] + (freq[1 + offset] >> 1));
-        ptr[i].cos1[2] = Freq_FpCos(phase[2 + offset] + (freq[2 + offset] >> 1));
-        ptr[i].cos1[3] = Freq_FpCos(phase[3 + offset] + (freq[3 + offset] >> 1));
-        ptr[i].cos1[4] = Freq_FpCos(phase[4 + offset] + (freq[4 + offset] >> 1));
-        ptr[i].cos1[5] = Freq_FpCos(phase[5 + offset] + (freq[5 + offset] >> 1));
-        ptr[i].cos1[6] = Freq_FpCos(phase[6 + offset] + (freq[6 + offset] >> 1));
-        ptr[i].cos1[7] = Freq_FpCos(phase[7 + offset] + (freq[7 + offset] >> 1));
+        ptr[i].cos1[0] = Phase_FpCos(phase[0 + offset] + (freq[0 + offset] >> 1));
+        ptr[i].cos1[1] = Phase_FpCos(phase[1 + offset] + (freq[1 + offset] >> 1));
+        ptr[i].cos1[2] = Phase_FpCos(phase[2 + offset] + (freq[2 + offset] >> 1));
+        ptr[i].cos1[3] = Phase_FpCos(phase[3 + offset] + (freq[3 + offset] >> 1));
+        ptr[i].cos1[4] = Phase_FpCos(phase[4 + offset] + (freq[4 + offset] >> 1));
+        ptr[i].cos1[5] = Phase_FpCos(phase[5 + offset] + (freq[5 + offset] >> 1));
+        ptr[i].cos1[6] = Phase_FpCos(phase[6 + offset] + (freq[6 + offset] >> 1));
+        ptr[i].cos1[7] = Phase_FpCos(phase[7 + offset] + (freq[7 + offset] >> 1));
     }
 }
 
@@ -87,9 +87,18 @@ inline static void MY_CONSTEXPR Dr_SetFreq(DrData* ptr, uint32_t num, MyFpS0_15*
         cosw.s16[5] = Freq_FpCos(freq[5 + offset]);
         cosw.s16[6] = Freq_FpCos(freq[6 + offset]);
         cosw.s16[7] = Freq_FpCos(freq[7 + offset]);
+        
+        ptr[i].half_coeff[0] = Freq_FpCos(freq[0 + offset]);
+        ptr[i].half_coeff[1] = Freq_FpCos(freq[1 + offset]);
+        ptr[i].half_coeff[2] = Freq_FpCos(freq[2 + offset]);
+        ptr[i].half_coeff[3] = Freq_FpCos(freq[3 + offset]);
+        ptr[i].half_coeff[4] = Freq_FpCos(freq[4 + offset]);
+        ptr[i].half_coeff[5] = Freq_FpCos(freq[5 + offset]);
+        ptr[i].half_coeff[6] = Freq_FpCos(freq[6 + offset]);
+        ptr[i].half_coeff[7] = Freq_FpCos(freq[7 + offset]);
 
         asm volatile(
-            "movi a5, 14\n\r"
+            "movi a5, 15\n\r"
             "wsr.sar a5\n\r"
             "ld.qr q0, %[cosw], 0\n\r"
             "ee.vst.128.ip q0, %[p], 16\n\r" // q0 <= sinw
@@ -122,7 +131,7 @@ inline static void Dr_Tick(DrData* ptr, uint32_t num, MyFpS0_15* gain, int32_t* 
 
     asm volatile (
         "ee.zero.accx\n\r"
-        "movi a6, 14\n\r"
+        "movi a6, 14\n\r"   
         "wsr.sar a6\n\r"
 
         ".dr_loop:\n\r"

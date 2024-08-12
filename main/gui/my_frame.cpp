@@ -12,7 +12,6 @@ void MyColoredFrame<T>::DrawHorizenLine(int16_t y, int16_t x, int16_t w) {
 template <class T>
 void MyColoredFrame<T>::DrawVeticalLine(int16_t x, int16_t y, int16_t h) {
     for (int16_t i = 0; i < h; ++i)
-        auto* p = (uint16_t*)screen_buffer + XYToIndex(x, y + i);
         *GetPtr(x, y + i) = color_;
 }
 
@@ -70,8 +69,8 @@ void MyColoredFrame<T>::MoveDrawContentVetical(const Bound &aera, int16_t offset
     }
 }
 
-template class MyColoredFrame<frame_colors::RGB888>;
-template class MyColoredFrame<frame_colors::RGB565>;
+// template class MyColoredFrame<frame_colors::RGB888>;
+// template class MyColoredFrame<frame_colors::RGB565>;
 template class MyColoredFrame<frame_colors::BGR565>;
-template class MyColoredFrame<frame_colors::RGB332>;
-template class MyColoredFrame<frame_colors::Mono>;
+// template class MyColoredFrame<frame_colors::RGB332>;
+// template class MyColoredFrame<frame_colors::Mono>;

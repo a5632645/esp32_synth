@@ -1,13 +1,8 @@
 #include "component_peer.h"
 #include "component.h"
 
-ComponentPeer::OwnedPtr::~OwnedPtr() {
-    if (delete_layer)
-        delete ptr;
-}
-
 void ComponentPeer::AddInvalidRect(Bound bound) {
-    bound = bound.GetIntersectionUncheck(context_->GetBound());
+    bound = bound.GetIntersectionUncheck(context_frame_->GetBound());
 
     if (!bound.IsValid())
         return;
@@ -45,14 +40,14 @@ void ComponentPeer::FlushInvalidRects() {
         return;
 
     invalid_rects_cache_.swap(invalid_rects_);
-    MyGraphic g{*context_};
+    MyGraphic g{context_->GetFrame()};
     Bound dirty_aera = invalid_rects_.front();
     int left = dirty_aera.x_ + dirty_aera.w_;
     int bottom = dirty_aera.y_ + dirty_aera.h_;
     context_->BeginFrame();
     for (auto& b : invalid_rects_) {
         component_->InternalPaint(g, b);
-        context_->AeraPainted(b);
+        context_->AeraDrawed(b);
 
         dirty_aera.x_ = std::min(dirty_aera.x_, b.x_);
         dirty_aera.y_ = std::min(dirty_aera.y_, b.y_);
@@ -89,6 +84,6 @@ void ComponentPeer::SetComponent(Component *owner) {
     invalid_rects_cache_.clear();
     if (context_ == nullptr)
         return;
-    owner->SetBound(context_->GetBound());
+    owner->SetBound(context_frame_->GetBound());
     owner->Repaint();
 }

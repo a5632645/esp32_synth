@@ -41,19 +41,19 @@ using Mono = uint8_t;
 template<typename T>
 inline static constexpr T ColorTransform(MyColor c) {
     if constexpr (std::is_same_v<T, RGB888>) {
-        return static_cast<T>(((r & 0xFF) << 16) | ((g & 0xFF) << 8) | (b & 0xFF));
+        return static_cast<T>(((c.r & 0xFF) << 16) | ((c.g & 0xFF) << 8) | (c.b & 0xFF));
     }
     else if constexpr (std::is_same_v<T, RGB565>) {
-        return static_cast<T>(((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3));
+        return static_cast<T>(((c.r & 0xF8) << 8) | ((c.g & 0xFC) << 3) | (c.b >> 3));
     }
     else if constexpr (std::is_same_v<T, BGR565>) {
-        return static_cast<T>(((b & 0xF8) << 8) | ((g & 0xFC) << 3) | (r >> 3));
+        return static_cast<T>(((c.b & 0xF8) << 8) | ((c.g & 0xFC) << 3) | (c.r >> 3));
     }
     else if constexpr (std::is_same_v<T, RGB332>) {
-        return static_cast<T>((r >> 5) | ((g >> 5) << 5) | ((b >> 6) << 10));
+        return static_cast<T>((c.r >> 5) | ((c.g >> 5) << 5) | ((c.b >> 6) << 10));
     }
     else if constexpr (std::is_same_v<T, Mono>) {
-        return static_cast<T>((r | g | b) == 0 ? 1 : 0);
+        return static_cast<T>((c.r | c.g | c.b) == 0 ? 1 : 0);
     }
     else {
         static_assert(false, "unknown color type");

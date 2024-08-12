@@ -27,8 +27,7 @@ public:
 
     void DrawSelf(MyGraphic& g) override {
         if (flags_.focus_ == FocusState::kFoucusSelf) {
-            g.SetColor(colors::kOrange);
-            g.FillRect(GetLocalBound());
+            g.FillRect(GetLocalBound(), colors::kOrange);
         }
 
         g.SetColor(colors::kWhite);

@@ -19,10 +19,24 @@ static void TwoTask2(void*) {
 
     alignas(16) int16_t phase[8] {};
     alignas(16) int16_t freq[8] {
-        MyFpS1_14_FromFloat(0.1f)
+        MyFpS0_15_FromFloat(0.1f),
+        MyFpS0_15_FromFloat(0.2f),
+        MyFpS0_15_FromFloat(0.3f),
+        MyFpS0_15_FromFloat(0.4f),
+        MyFpS0_15_FromFloat(0.5f),
+        MyFpS0_15_FromFloat(0.6f),
+        MyFpS0_15_FromFloat(0.7f),
+        MyFpS0_15_FromFloat(0.8f)
     };
     alignas(16) int16_t amp[8] {
-        MyFpS1_14_FromFloat(0.5f)
+        MyFpS0_15_FromFloat(1.0f),
+        MyFpS0_15_FromFloat(1.0f / 2.0f),
+        MyFpS0_15_FromFloat(1.0f / 3.0f),
+        MyFpS0_15_FromFloat(1.0f / 4.0f),
+        MyFpS0_15_FromFloat(1.0f / 5.0f),
+        MyFpS0_15_FromFloat(1.0f / 6.0f),
+        MyFpS0_15_FromFloat(1.0f / 7.0f),
+        MyFpS0_15_FromFloat(1.0f / 8.0f)
     };
 
     Dr_Reset(&test, 1, freq, phase);
@@ -49,7 +63,14 @@ static void TwoTask2(void*) {
     {
         int32_t tmp = 0;
         Dr_Tick(&test, 1, amp, &tmp);
-        ESP_LOGI("main", "tick");
+        printf("%f,%f,%f,%f,%f,%f,%f,%f\n", MyFpS1_14_ToFloat(test.sin0[0]),
+            MyFpS1_14_ToFloat(test.sin0[1]),
+            MyFpS1_14_ToFloat(test.sin0[2]),
+            MyFpS1_14_ToFloat(test.sin0[3]),
+            MyFpS1_14_ToFloat(test.sin0[4]),
+            MyFpS1_14_ToFloat(test.sin0[5]),
+            MyFpS1_14_ToFloat(test.sin0[6]),
+            MyFpS1_14_ToFloat(test.sin0[7]));
 
         // auto tick_consumed = esp_timer_get_time() - tick_begin;
 

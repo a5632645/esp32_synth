@@ -138,8 +138,7 @@ void TablePanel::TableTabBar::DrawSelf(MyGraphic& g) {
     // give a high light
     auto w = font.GetWidth(titles_[curr_select_index]);
     if (flags_.focus_ == FocusState::kFoucusSelf) {
-        g.SetColor(colors::kOrange);
-        g.FillRect(Bound(draw_x, 0, w, 8));
+        g.FillRect(Bound(draw_x, 0, w, 8), colors::kOrange);
         g.SetColor(colors::kWhite);
         g.DrawSingleLineText(titles_[curr_select_index], draw_x, 0, -1);
     }

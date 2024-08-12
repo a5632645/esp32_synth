@@ -6,42 +6,17 @@
 
 #include <vector>
 #include "bound.h"
-#include "ll_context.h"
+#include "my_driver.h"
 #include "graphic.h"
 
 class Component;
 
 class ComponentPeer {
 public:
-    struct OwnedPtr {
-        Component* ptr { nullptr };
-        bool delete_layer { false };
-
-        OwnedPtr() = default;
-        OwnedPtr(Component* ptr, bool owned) : ptr(ptr), delete_layer(owned) {}
-
-        // copy constructor will cause deleted memory in vector expand
-        OwnedPtr(const OwnedPtr&) = delete;
-        OwnedPtr& operator=(const OwnedPtr&) = delete;
-        OwnedPtr(OwnedPtr&& other) noexcept {
-            ptr = other.ptr;
-            delete_layer = other.delete_layer;
-            other.ptr = nullptr;
-            other.delete_layer = false;
-        }
-        OwnedPtr& operator=(OwnedPtr&& other) noexcept {
-            ptr = other.ptr;
-            delete_layer = other.delete_layer;
-            other.ptr = nullptr;
-            other.delete_layer = false;
-            return *this;
-        }
-        ~OwnedPtr();
-    };
-
-    ComponentPeer(LLContext* context) : context_(context) {
+    ComponentPeer(MyDriver* context) : context_(context) {
         invalid_rects_.reserve(16);
         invalid_rects_cache_.reserve(16);
+        context_frame_ = &context->GetFrame();
     }
 
     /**
@@ -81,5 +56,6 @@ private:
     std::vector<Bound> invalid_rects_cache_;
     std::vector<Bound> invalid_rects_;
     Component* component_ = nullptr;
-    LLContext* context_ = nullptr;
+    MyDriver* context_ = nullptr;
+    MyFrame* context_frame_ = nullptr;
 };

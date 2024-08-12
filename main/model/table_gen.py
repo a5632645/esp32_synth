@@ -20,7 +20,7 @@ with open('./main/model/freq_sin_table.c', 'w') as f:
     scale = table_size
     t = np.arange(table_size, dtype=np.float32)
     t = t / table_size
-    t = np.sin(t * np.pi / 2) * scale
+    t = np.sin(t * np.pi) * scale
     t = np.round(t).astype(np.int32)
     t = np.clip(t, a_min=-32767, a_max=32767)
     f.write('#include <stdint.h>\n')

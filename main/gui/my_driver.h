@@ -12,6 +12,8 @@ public:
     virtual ~MyDriver() = default;
 
     virtual void BeginFrame() = 0;
-    virtual void AeraDrawed(const Bound& bound, const MyFrame& frame) = 0;
-    virtual void EndFrame(const Bound& bound, const MyFrame& frame) = 0;
+    virtual void AeraDrawed(const Bound& bound) = 0;
+    virtual void EndFrame(const Bound& bound) = 0;
+
+    virtual MyFrame& GetFrame() = 0;
 };

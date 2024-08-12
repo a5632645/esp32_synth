@@ -41,10 +41,9 @@ typedef struct {
  * @param x -1 ~ 1, -16384 ~ 16384, -pi ~ pi
  * @return -16384 ~ 16384
  */
-inline static MY_CONSTEXPR MyFpS1_14 Phase_FpSin(MyFpS1_14 x) {
-    uint16_t a = x;
-     auto sign = a & 0b1000000000000000;
-     return sign | phase_sin_table[a & 16383];
+inline static MY_CONSTEXPR MyFpS1_14 Phase_FpSin(uint16_t x) {
+     auto sign = x & 0b1000000000000000u;
+     return sign | phase_sin_table[x & 16383u];
 }
 
 /**
@@ -52,8 +51,8 @@ inline static MY_CONSTEXPR MyFpS1_14 Phase_FpSin(MyFpS1_14 x) {
  * @param x -1 ~ 1, -16384 ~ 16384, -pi ~ pi
  * @return -16384 ~ 16384
  */
-inline static MY_CONSTEXPR MyFpS1_14 Phase_FpCos(MyFpS1_14 x) {
-    return Phase_FpSin(x + 8192);
+inline static MY_CONSTEXPR MyFpS1_14 Phase_FpCos(uint16_t x) {
+    return Phase_FpSin(x + 8191u);
 }
 
 /**
@@ -61,9 +60,9 @@ inline static MY_CONSTEXPR MyFpS1_14 Phase_FpCos(MyFpS1_14 x) {
  * @param x 0 ~ 1, 0 ~ 32768, 0 ~ pi / 2
  * @return 
  */
-inline static MY_CONSTEXPR MyFpS0_15 Freq_FpSin(MyFpS0_15 x) {
-    uint16_t a = x;
-    return freq_sin_table[a & 32767];
+inline static MY_CONSTEXPR MyFpS0_15 Freq_FpSin(uint16_t x) {
+    auto sign = x & 0b1000000000000000u;
+    return sign | freq_sin_table[x & 32767u];
 }
 
 /**
@@ -71,8 +70,8 @@ inline static MY_CONSTEXPR MyFpS0_15 Freq_FpSin(MyFpS0_15 x) {
  * @param x -1 ~ 1, -32768 ~ 32768, -pi ~ pi
  * @return 
  */
-inline static MY_CONSTEXPR MyFpS0_15 Freq_FpCos(MyFpS0_15 x) {
-    return Freq_FpSin(x + 16384);
+inline static MY_CONSTEXPR MyFpS0_15 Freq_FpCos(uint16_t x) {
+    return Freq_FpSin(x + 16383u);
 }
 
 /**
