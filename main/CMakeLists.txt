@@ -4,6 +4,7 @@ set (GUI_SOURCES
     "gui/my_font.cpp"
     "gui/timer_queue.cpp"
     "gui/graphic.cpp"
+    "gui/my_frame.cpp"
 
     "ui/table_panel.cpp"
     "ui/keyboard_panel.cpp"
@@ -18,9 +19,9 @@ set (DRIVER_SOURCES
     "keyboard.c"
 )
 set (USER_SOURCES
-    "main.cpp"
+    # "main.cpp"
     # "main2.cpp"
-    # "main3.cpp"
+    "main3.cpp"
     "st7735_ll_contex.cpp"
     "model/global_model.c"
     "model/add_osc.cpp"

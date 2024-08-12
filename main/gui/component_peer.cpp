@@ -45,7 +45,7 @@ void ComponentPeer::FlushInvalidRects() {
         return;
 
     invalid_rects_cache_.swap(invalid_rects_);
-    Graphic g{*context_};
+    MyGraphic g{*context_};
     Bound dirty_aera = invalid_rects_.front();
     int left = dirty_aera.x_ + dirty_aera.w_;
     int bottom = dirty_aera.y_ + dirty_aera.h_;

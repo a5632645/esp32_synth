@@ -1,107 +1,27 @@
 #pragma once
 
-#ifdef __cplusplus
-#define MY_CONSTEXPR constexpr
-#else
-#define MY_CONSTEXPR
-#endif
+#include <stdint.h>
+#include <math.h>
+#include <string.h>
+#include "table_helper.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <stdint.h>
-#include <math.h>
-#include <string.h>
-#include "table.h"
-
-typedef int16_t MyFpS0_15;
-typedef int16_t MyFpS1_14;
-
-/**
- * @brief 
- * @param x -1 ~ 1, -16384 ~ 16384, -pi ~ pi
- * @return -16384 ~ 16384
- */
-inline static MY_CONSTEXPR MyFpS1_14 Phase_FpSin(MyFpS1_14 x) {
-    uint16_t a = x;
-     auto sign = a & 0b1000000000000000;
-     return sign | phase_sin_table[a & 16383];
-}
-
-/**
- * @brief 
- * @param x -1 ~ 1, -16384 ~ 16384, -pi ~ pi
- * @return -16384 ~ 16384
- */
-inline static MY_CONSTEXPR MyFpS1_14 Phase_FpCos(MyFpS1_14 x) {
-    return Phase_FpSin(x + 8192);
-}
-
-/**
- * @brief 
- * @param x 0 ~ 1, 0 ~ 32768, 0 ~ pi / 2
- * @return 
- */
-inline static MY_CONSTEXPR MyFpS0_15 Freq_FpSin(MyFpS0_15 x) {
-    uint16_t a = x;
-    return freq_sin_table[a & 32767];
-}
-
-/**
- * @brief 
- * @param x -1 ~ 1, -32768 ~ 32768, -pi ~ pi
- * @return 
- */
-inline static MY_CONSTEXPR MyFpS0_15 Freq_FpCos(MyFpS0_15 x) {
-    return Freq_FpSin(x + 16384);
-}
-
-/**
- * @brief 
- * @param x -1 ~ 1, -16384 ~ 16384 
- * @return 
- */
-inline static MY_CONSTEXPR MyFpS1_14 Sin2Cos(MyFpS1_14 x) {
-    uint16_t a = x;
-    a &= 0b0111111111111111; // remove sign
-    if (x > 16383)
-        return 0;
-
-    return sin2cos_table[a];
-}
 
 typedef struct {
     MyFpS1_14 x0[8];
     MyFpS1_14 old_y0[8];
     MyFpS1_14 y0[8];
     MyFpS0_15 half_coef[8];
-} __attribute__((aligned(16))) CoridcData;
+} __attribute__((aligned(16))) CordicData;
 
 typedef struct {
     MyFpS1_14 phase[8]; // -1 ~ 1, -pi ~ pi, -16384 ~ 16384
     MyFpS0_15 freq[8];  //  0 ~ 1, 0 ~ pi / 2, 0 ~ 32768
 } __attribute__((aligned(16))) CoridcParamStruct;
 
-typedef struct {
-    int16_t s16[8];
-} __attribute__((aligned(16))) Vec128Struct;
-
-inline static MY_CONSTEXPR MyFpS1_14 MyFpS1_14_FromFloat(float x) {
-    return (int16_t)(x * (1 << 14));
-}
-inline static MY_CONSTEXPR float MyFpS1_14_ToFloat(MyFpS1_14 x) {
-    return x * (1.0f / (1 << 14));
-}
-
-inline static MY_CONSTEXPR MyFpS0_15 MyFpS0_15_FromFloat(float x) {
-    return (int16_t)(x * (1 << 15));
-}
-inline static MY_CONSTEXPR float MyFpS0_15_ToFloat(MyFpS0_15 x) {
-    return x * (1.0f / (1 << 15));
-}
-
-inline static MY_CONSTEXPR void Coridc_Reset(CoridcData* ptr, uint32_t num, CoridcParamStruct* reset) {
+inline static MY_CONSTEXPR void Coridc_Reset(CordicData* ptr, uint32_t num, CoridcParamStruct* reset) {
     for (uint32_t i = 0; i < num; ++i) {
         ptr[i].y0[0] = Phase_FpSin(reset[i].phase[0]);
         ptr[i].y0[1] = Phase_FpSin(reset[i].phase[1]);
@@ -132,7 +52,7 @@ inline static MY_CONSTEXPR void Coridc_Reset(CoridcData* ptr, uint32_t num, Cori
     }
 }
 
-inline static void Coridc_SetFreq(CoridcData* ptr, uint32_t len, CoridcParamStruct* freq) {
+inline static void Coridc_SetFreq(CordicData* ptr, uint32_t len, CoridcParamStruct* freq) {
     Vec128Struct cos_p;
     Vec128Struct sin_w;
     Vec128Struct cos_w;
@@ -186,13 +106,13 @@ inline static void Coridc_SetFreq(CoridcData* ptr, uint32_t len, CoridcParamStru
     }
 }
 
-typedef int32_t MyFpS7_24;
-inline static void Coridc_Tick(CoridcData* ptr, MyFpS0_15* gain, uint32_t len, MyFpS7_24* out) {
+inline static void Coridc_Tick(CordicData* ptr, MyFpS0_15* gain, uint32_t len, MyFpS7_24* out) {
     asm volatile (
         "movi.n a5, 14\n\r" // half_coeff * 2, >>15 turns into >>14
         "wsr.sar a5\n\r"
         "ee.zero.accx\n\r"
 
+        // TODO: 修改Cordic的结构体和汇编，最好在每一条计算语句都能读写内存
         ".dr_tick_loop:\n\r"
         "ee.vld.128.ip q0, %[p], 32\n\r"  // q0 <= curr.x0
         "ee.vld.128.ip q1, %[p], 16\n\r"  // q1 <= curr.y0

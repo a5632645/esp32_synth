@@ -14,7 +14,7 @@ public:
         table_.GetFocus();
     }
 
-    void DrawSelf(Graphic& g) override {
+    void DrawSelf(MyGraphic& g) override {
         g.Fill(colors::kBlack);
     }
 

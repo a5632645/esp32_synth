@@ -15,7 +15,7 @@ public:
         TimerQueue::GetInstance().AddTimer(&timer_task_, false, true);
     }
 
-    void DrawSelf(Graphic& g) override {
+    void DrawSelf(MyGraphic& g) override {
         g.Fill(colors::kBlack);
         g.SetColor(colors::kWhite);
         for (int i = 0; i < 4; i++) {

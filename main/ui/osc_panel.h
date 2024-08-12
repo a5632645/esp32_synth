@@ -5,7 +5,7 @@
 
 class OscPanel : public Component {
 public:
-    void DrawSelf(Graphic& g) override {
+    void DrawSelf(MyGraphic& g) override {
         auto cb = g.GetClipBound();
         auto b = GetLocalBound();
         auto center_y = b.GetCenter().y_;

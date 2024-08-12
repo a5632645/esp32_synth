@@ -8,7 +8,7 @@ DebugPanel::DebugPanel() {
     TimerQueue::GetInstance().AddTimer(&timer_task_, false, false);
 }
 
-void DebugPanel::DrawSelf(Graphic& g) {
+void DebugPanel::DrawSelf(MyGraphic& g) {
     g.Fill(colors::kBlack);
 
     auto b = GetLocalBound();

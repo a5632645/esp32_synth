@@ -39,12 +39,12 @@ private:
     int note_curr_ { -1 };
     int note_prev_ { -1 };
     uint32_t num_active_ {};
-    uint32_t old_num_active_ { -1 };
+    uint32_t old_num_active_ { 255 };
     uint32_t cordic_active_{};
     bool freq_changed_{};
 
     alignas(16) MyFpS0_15 gains_[kMaxNumHarmonics];
-    std::array<CoridcData, kNumCordic> cordics_;
+    std::array<CordicData, kNumCordic> cordics_;
     std::array<CoridcParamStruct, kNumCordic> cordic_params_;
 
     // some parameters

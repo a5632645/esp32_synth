@@ -22,7 +22,7 @@ void TablePanel::OnEventGet(const MyEvent& e) {
     }
 }
 
-void TablePanel::DrawAboveChild(Graphic& g) {
+void TablePanel::DrawAboveChild(MyGraphic& g) {
     if (flags_.focus_ != FocusState::kFoucusSelf)
         return;
 
@@ -123,7 +123,7 @@ void TablePanel::TableTabBar::OnEventGet(const MyEvent& e) {
     }
 }
 
-void TablePanel::TableTabBar::DrawSelf(Graphic& g) {
+void TablePanel::TableTabBar::DrawSelf(MyGraphic& g) {
     auto& font = g.GetFont();
     g.Fill(colors::kBlack);
 

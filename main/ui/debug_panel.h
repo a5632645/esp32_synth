@@ -7,7 +7,7 @@ class DebugPanel : public Component {
 public:
     DebugPanel();
 
-    void DrawSelf(Graphic& g) override;
+    void DrawSelf(MyGraphic& g) override;
     void OnGetFocus() override;
 
     void Resume() { timer_task_.Resume(false); }

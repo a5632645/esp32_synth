@@ -24,8 +24,8 @@ public:
     virtual ~Component();
 
     // drawing
-    virtual void DrawSelf(Graphic& g) {}
-    virtual void DrawAboveChild(Graphic& g) {}
+    virtual void DrawSelf(MyGraphic& g) {}
+    virtual void DrawAboveChild(MyGraphic& g) {}
     virtual void Resized() {}
 
     // event
@@ -102,7 +102,7 @@ public:
 protected:
     friend class ComponentPeer;
 
-    void InternalPaint(Graphic& g, Bound repaint_bound);
+    void InternalPaint(MyGraphic& g, Bound repaint_bound);
     void InternalRepaint(Bound repaint_bound);
 
     // bounding

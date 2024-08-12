@@ -1,137 +1,154 @@
 #pragma once
 
-#ifndef __cplusplus
-#error only c++ support
+#include "table_helper.h"
+
+#ifdef __cplusplus
+extern "C" {
 #endif
 
-#include "my_math.h"
-#include "my_fp.h"
-
-extern "C" {
 typedef struct {
-    MyFpInt128T sin0_;
-    MyFpInt128T sin1_;
-    MyFpInt128T cos0_;
-    MyFpInt128T cos1_;
-    MyFpInt128T coeff_;
-    MyFpInt128T gain_;
-} ParalleDr;
+    MyFpS0_15 half_coeff[8];
+    MyFpS1_14 sin1[8];
+    MyFpS1_14 sin0[8];
+    MyFpS1_14 cos1[8];
+    MyFpS1_14 cos0[8];
+} __attribute__((aligned(16))) DrData;
 
-extern void ParalleDr_Reset(ParalleDr* dr, MyFpInt128T* freq, MyFpInt128T* phase, uint32_t num);
-inline static void ParalleDr_ResetF(ParalleDr* dr, float* freq, float* phase, uint32_t num) {
-    MyFpFloatBundleT fb = {};
-    MyFpFloatBundleT fb1 = {};
-    MyFpFloatBundleT fb2 = {};
-    MyFpFloatBundleT fb3 = {};
-    MyFpFloatBundleT fb4 = {};
+inline static void MY_CONSTEXPR Dr_Reset(DrData* ptr, uint32_t num, MyFpS0_15* freq, MyFpS1_14* phase) {
+    for (uint32_t i = 0; i < num; i++) {
+        auto offset = i * 8;
+        ptr[i].half_coeff[0] = Freq_FpCos(freq[0 + offset]);
+        ptr[i].half_coeff[1] = Freq_FpCos(freq[1 + offset]);
+        ptr[i].half_coeff[2] = Freq_FpCos(freq[2 + offset]);
+        ptr[i].half_coeff[3] = Freq_FpCos(freq[3 + offset]);
+        ptr[i].half_coeff[4] = Freq_FpCos(freq[4 + offset]);
+        ptr[i].half_coeff[5] = Freq_FpCos(freq[5 + offset]);
+        ptr[i].half_coeff[6] = Freq_FpCos(freq[6 + offset]);
+        ptr[i].half_coeff[7] = Freq_FpCos(freq[7 + offset]);
+
+        ptr[i].sin0[0] = Freq_FpSin(phase[0 + offset]);
+        ptr[i].sin0[1] = Freq_FpSin(phase[1 + offset]);
+        ptr[i].sin0[2] = Freq_FpSin(phase[2 + offset]);
+        ptr[i].sin0[3] = Freq_FpSin(phase[3 + offset]);
+        ptr[i].sin0[4] = Freq_FpSin(phase[4 + offset]);
+        ptr[i].sin0[5] = Freq_FpSin(phase[5 + offset]);
+        ptr[i].sin0[6] = Freq_FpSin(phase[6 + offset]);
+        ptr[i].sin0[7] = Freq_FpSin(phase[7 + offset]);
+
+        ptr[i].sin1[0] = Freq_FpSin(phase[0 + offset] + (freq[0 + offset] >> 1));
+        ptr[i].sin1[1] = Freq_FpSin(phase[1 + offset] + (freq[1 + offset] >> 1));
+        ptr[i].sin1[2] = Freq_FpSin(phase[2 + offset] + (freq[2 + offset] >> 1));
+        ptr[i].sin1[3] = Freq_FpSin(phase[3 + offset] + (freq[3 + offset] >> 1));
+        ptr[i].sin1[4] = Freq_FpSin(phase[4 + offset] + (freq[4 + offset] >> 1));
+        ptr[i].sin1[5] = Freq_FpSin(phase[5 + offset] + (freq[5 + offset] >> 1));
+        ptr[i].sin1[6] = Freq_FpSin(phase[6 + offset] + (freq[6 + offset] >> 1));
+        ptr[i].sin1[7] = Freq_FpSin(phase[7 + offset] + (freq[7 + offset] >> 1));
+        
+        ptr[i].cos0[0] = Freq_FpCos(phase[0 + offset]);
+        ptr[i].cos0[1] = Freq_FpCos(phase[1 + offset]);
+        ptr[i].cos0[2] = Freq_FpCos(phase[2 + offset]);
+        ptr[i].cos0[3] = Freq_FpCos(phase[3 + offset]);
+        ptr[i].cos0[4] = Freq_FpCos(phase[4 + offset]);
+        ptr[i].cos0[5] = Freq_FpCos(phase[5 + offset]);
+        ptr[i].cos0[6] = Freq_FpCos(phase[6 + offset]);
+        ptr[i].cos0[7] = Freq_FpCos(phase[7 + offset]);
+
+        ptr[i].cos1[0] = Freq_FpCos(phase[0 + offset] + (freq[0 + offset] >> 1));
+        ptr[i].cos1[1] = Freq_FpCos(phase[1 + offset] + (freq[1 + offset] >> 1));
+        ptr[i].cos1[2] = Freq_FpCos(phase[2 + offset] + (freq[2 + offset] >> 1));
+        ptr[i].cos1[3] = Freq_FpCos(phase[3 + offset] + (freq[3 + offset] >> 1));
+        ptr[i].cos1[4] = Freq_FpCos(phase[4 + offset] + (freq[4 + offset] >> 1));
+        ptr[i].cos1[5] = Freq_FpCos(phase[5 + offset] + (freq[5 + offset] >> 1));
+        ptr[i].cos1[6] = Freq_FpCos(phase[6 + offset] + (freq[6 + offset] >> 1));
+        ptr[i].cos1[7] = Freq_FpCos(phase[7 + offset] + (freq[7 + offset] >> 1));
+    }
+}
+
+inline static void MY_CONSTEXPR Dr_SetFreq(DrData* ptr, uint32_t num, MyFpS0_15* freq) {
+    Vec128Struct sinw = {};
+    Vec128Struct cosw = {};
     for (uint32_t i = 0; i < num; ++i) {
-        for (int j = 0; j < 8; ++j) {
-            fb.f32[j] = MySin(*phase);
-            fb1.f32[j] = MySin(*phase + *freq);
-            fb2.f32[j] = MyCos(*phase);
-            fb3.f32[j] = MyCos(*phase + *freq);
-            fb4.f32[j] = 2.0f * MyCos(*freq);
-            ++phase;
-            ++freq;
-        }
-        MyFp_FromFloatBundle(&fb, &dr[i].sin0_);
-        MyFp_FromFloatBundle(&fb1, &dr[i].sin1_);
-        MyFp_FromFloatBundle(&fb2, &dr[i].cos0_);
-        MyFp_FromFloatBundle(&fb3, &dr[i].cos1_);
-        MyFp_FromFloatBundle(&fb4, &dr[i].coeff_);
+        auto offset = i * 8;
+
+        sinw.s16[0] = Freq_FpSin(freq[0 + offset]);
+        sinw.s16[1] = Freq_FpSin(freq[1 + offset]);
+        sinw.s16[2] = Freq_FpSin(freq[2 + offset]);
+        sinw.s16[3] = Freq_FpSin(freq[3 + offset]);
+        sinw.s16[4] = Freq_FpSin(freq[4 + offset]);
+        sinw.s16[5] = Freq_FpSin(freq[5 + offset]);
+        sinw.s16[6] = Freq_FpSin(freq[6 + offset]);
+        sinw.s16[7] = Freq_FpSin(freq[7 + offset]);
+
+        cosw.s16[0] = Freq_FpCos(freq[0 + offset]);
+        cosw.s16[1] = Freq_FpCos(freq[1 + offset]);
+        cosw.s16[2] = Freq_FpCos(freq[2 + offset]);
+        cosw.s16[3] = Freq_FpCos(freq[3 + offset]);
+        cosw.s16[4] = Freq_FpCos(freq[4 + offset]);
+        cosw.s16[5] = Freq_FpCos(freq[5 + offset]);
+        cosw.s16[6] = Freq_FpCos(freq[6 + offset]);
+        cosw.s16[7] = Freq_FpCos(freq[7 + offset]);
+
+        asm volatile(
+            "movi a5, 14\n\r"
+            "wsr.sar a5\n\r"
+            "ld.qr q0, %[cosw], 0\n\r"
+            "ee.vst.128.ip q0, %[p], 16\n\r" // q0 <= sinw
+            "ee.vld.128.ip q1, %[p], 32\n\r" // q1 <= sin1
+            "ee.vmul.s16.ld.incp q2, %[p], q3, q0, q1\n\r" // q2 <= cos1
+            "addi %[p], %[p], -48\n\r"
+            "ld.qr q4, %[sinw], 0\n\r" // q4 <= cosw
+            "ee.vmul.s16 q5, q2, q4\n\r"
+            "ee.vadds.s16 q6, q3, q5\n\r"
+            "ee.vmul.s16.ld.incp q6, %[p], q5, q2, q4\n\r"
+            "addi %[p], %[p], 16\n\r"
+            "ee.vmul.s16 q3, q1, q0\n\r"
+            "ee.vsubs.s16 q4, q5, q3\n\r"
+            "st.qr q4, %[p], 0\n\r"
+            :
+            :[p]"r"(ptr), [sinw]"r"(&sinw), [cosw]"r"(&cosw)
+            :"a5"
+        );
+
+        ++ptr;
+        freq += 8;
     }
 }
-/*
-* there is no vector arithmetic sign16 left shift instruction
-* so we do it by hand
-*/
-extern void __ParalleDr_SetFreq(ParalleDr* dr, MyFpInt128T* fsin, MyFpInt128T* fcos, uint32_t num);
-inline static void ParalleDr_SetFreq(ParalleDr* dr, MyFpInt128T* fsin, MyFpInt128T* fcos, uint32_t num) {
-    __ParalleDr_SetFreq(dr, fsin, fcos, num);
-    for (uint32_t i = 0; i < num; ++i) {
-        dr[i].coeff_.s16[0] = fcos[i].s16[0] << 1;
-        dr[i].coeff_.s16[1] = fcos[i].s16[1] << 1;
-        dr[i].coeff_.s16[2] = fcos[i].s16[2] << 1;
-        dr[i].coeff_.s16[3] = fcos[i].s16[3] << 1;
-        dr[i].coeff_.s16[4] = fcos[i].s16[4] << 1;
-        dr[i].coeff_.s16[5] = fcos[i].s16[5] << 1;
-        dr[i].coeff_.s16[6] = fcos[i].s16[6] << 1;
-        dr[i].coeff_.s16[7] = fcos[i].s16[7] << 1;
+
+inline static void Dr_Tick(DrData* ptr, uint32_t num, MyFpS0_15* gain, int32_t* out) {
+    if (num == 0) {
+        *out = 0;
+        return;
     }
-}
-inline static void ParalleDr_SetFreqF(ParalleDr* dr, float* freq, uint32_t num) {
-    MyFpFloatBundleT fb = {};
-    MyFpFloatBundleT fb1 = {};
-    MyFpInt128T fcos = {};
-    MyFpInt128T fsin = {};
-    MyFpInt128T tmp0 = {};
-    MyFpInt128T tmp1 = {};
-    MyFpS1_15 two = MYFP_FROM_FLOAT(2.0f);
-    for (uint32_t i = 0; i < num; ++i) {
-        for (int j = 0; j < 8; ++j) {
-            fb.f32[j] = MySin(*freq);
-            fb1.f32[j] = MyCos(*freq);
-            ++freq;
-        }
-        MyFp_FromFloatBundle(&fb, &fcos);
-        MyFp_FromFloatBundle(&fb1, &fsin);
 
-        MyFp_Mul(&dr[i].sin0_, &fcos, &tmp0);
-        MyFp_Mul(&dr[i].cos0_, &fsin, &tmp1);
-        MyFp_AddSat(&tmp0, &tmp1, &dr[i].sin1_);
+    asm volatile (
+        "ee.zero.accx\n\r"
+        "movi a6, 14\n\r"
+        "wsr.sar a6\n\r"
 
-        MyFp_Mul(&dr[i].cos0_, &fcos, &tmp0);
-        MyFp_Mul(&dr[i].sin0_, &fsin, &tmp1);
-        MyFp_AddSat(&tmp0, &tmp1, &dr[i].cos1_);
+        ".dr_loop:\n\r"
+        "ee.vld.128.ip            q0, %[p], 16         \n\r" // q0 <= half_coeff
+        "ee.vld.128.ip            q1, %[p], 16         \n\r" // q1 <= sin1
+        "ee.vmul.s16.ld.incp      q2, %[p], q3, q0, q1 \n\r" // q2 <= sin0, q3 <= c * s1, exec.ptr = curr.cos1
+        "ee.vsubs.s16.ld.incp     q4, %[p], q5, q3, q2 \n\r" // q4 <= cos1, q5 <= new_sin1, q1 <= new_sin0, exec.ptr = curr.cos0
+        "ee.vld.128.ip            q3, %[g], 16         \n\r" // q3 <= gain
+        "ee.vmulas.s16.accx.ld.ip q6, %[p], -48, q3, q2\n\r" // q6 <= cos0, exec.ptr = curr.sin1
+        "ee.vmul.s16.st.incp      q5, %[p], q3, q4, q0 \n\r" // exec.ptr = curr.sin0
+        "ee.vsubs.s16.st.incp     q1, %[p], q5, q3, q6 \n\r" // q5 <= new_cos1, exec.ptr = curr.cos1
+        "ee.vst.128.ip            q5, %[p], 16         \n\r"
+        "ee.vst.128.ip            q4, %[p], 16         \n\r" // exec.ptr = next.half_coeff
 
-        MyFp_MulBC(&fcos, &two, &dr[i].coeff_);
-    }
-}
-extern void ParalleDr_Tick(ParalleDr* dr, int16_t* sample_out, uint32_t num, uint32_t sample_len);
+        "addi %[num], %[num], -1\n\r"
+        "bnez %[num], .dr_loop\n\r"
+        
+        "movi a7, 5\n\r"
+        "ee.srs.accx a6, a7, 0\n\r"
+        "s32i a6, %[out], 0\n\r"
+        :
+        :[p]"r"(ptr), [num]"r"(num), [g]"r"(gain), [out]"r"(out)
+        :"a6", "a7"
+    );
 }
 
-template <typename T>
-struct DR {
-    T sin0_;
-    T sin1_;
-    T cos0_;
-    T cos1_;
-    T coeff_;
-
-    /**
-     * @brief set the initial value
-     * @param freq 0 ~ pi
-     * @param phase 0 ~ 2pi
-     */
-    inline void Reset(T freq, T phase) noexcept {
-        sin0_ = MySin(phase);
-        sin1_ = MySin(phase + freq);
-        cos0_ = MyCos(phase);
-        cos1_ = MyCos(phase + freq);
-        coeff_ = T(2) * MyCos(freq);
-    }
-
-    /**
-     * @brief set the frequency
-     * @param freq 0 ~ pi
-     */
-    inline void SetFreq(T freq) noexcept {
-        T fcos = MyCos(freq);
-        T fsin = MySin(freq);
-        sin1_ = sin0_ * fcos + cos0_ * fsin;
-        cos1_ = cos0_ * fcos - sin0_ * fsin;
-        coeff_ = T(2) * fcos;
-    }
-
-    inline void Tick() noexcept {
-        T e = coeff_ * sin1_ - sin0_;
-        sin0_ = sin1_;
-        sin1_ = e;
-        e = coeff_ * cos1_ - cos0_;
-        cos0_ = cos1_;
-        cos1_ = e;
-    }
-
-    inline T Sin() const noexcept { return sin0_; }
-    inline T Cos() const noexcept { return cos0_; } 
-};
+#ifdef __cplusplus
+}
+#endif

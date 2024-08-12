@@ -110,7 +110,7 @@ void Component::BringToBack() {
     Repaint();
 }
 
-void Component::InternalPaint(Graphic &g, Bound repaint_bound)
+void Component::InternalPaint(MyGraphic &g, Bound repaint_bound)
 {
     auto intersection = global_bound_.GetIntersectionUncheck(repaint_bound);
     if(!intersection.IsValid())

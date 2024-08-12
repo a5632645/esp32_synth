@@ -45,7 +45,7 @@ void SettingPanel::Resized() {
     }
 }
 
-void SettingPanel::DrawSelf(Graphic& g) {
+void SettingPanel::DrawSelf(MyGraphic& g) {
     g.Fill(colors::kBlack);
 
     if (flags_.focus_ == FocusState::kFoucusSelf) {
@@ -88,7 +88,7 @@ void SettingPanel::HandleEvent(const MyEvent& e) {
 // ================================================================================
 // OptionComponent
 // ================================================================================
-void SettingPanel::OptionComponent::DrawSelf(Graphic& g) {
+void SettingPanel::OptionComponent::DrawSelf(MyGraphic& g) {
     if (flags_.focus_ == FocusState::kFoucusSelf)
         g.Fill(colors::kOrange);
 

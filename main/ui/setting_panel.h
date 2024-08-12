@@ -8,14 +8,14 @@ public:
 
     void OnEventGet(const MyEvent& e) override;
     void Resized() override;
-    void DrawSelf(Graphic& g) override;
+    void DrawSelf(MyGraphic& g) override;
 private:
     class OptionComponent : public Component {
     public:
         OptionComponent(uint8_t* value, std::string_view title, std::vector<std::string_view> options) :
             value_(value), title_(title), options_(std::move(options)) {}
 
-        void DrawSelf(Graphic& g) override;
+        void DrawSelf(MyGraphic& g) override;
         void OnEventGet(const MyEvent& e) override;
     private:
         uint8_t* value_ = nullptr;

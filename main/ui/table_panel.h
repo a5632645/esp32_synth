@@ -13,7 +13,7 @@ public:
     TablePanel();
 
     void OnEventGet(const MyEvent& e) override;
-    void DrawAboveChild(Graphic& g) override;
+    void DrawAboveChild(MyGraphic& g) override;
     void Resized() override;
 
     KeyboardPanel& GetKeyboardPanel() { return keyboard_; }
@@ -28,7 +28,7 @@ private:
             std::string_view{ "debug" }
         };
 
-        void DrawSelf(Graphic& g) override;
+        void DrawSelf(MyGraphic& g) override;
         void OnEventGet(const MyEvent& e) override;
     private:
         uint16_t curr_select_index = 0;

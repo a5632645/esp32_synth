@@ -139,7 +139,7 @@ static void TimerQueueTask(void*) {
 
 class StaticsComponent : public Component {
 public:
-    void DrawSelf(Graphic& g) override {
+    void DrawSelf(MyGraphic& g) override {
         g.SetColor(colors::kRed);
         g.DrawSingleLineText(std::to_string(drawed_per_sec), 0, 0);
     }

@@ -25,7 +25,7 @@ public:
         keys_[note % 12].NoteOff();
     }
 
-    void DrawSelf(Graphic& g) override {
+    void DrawSelf(MyGraphic& g) override {
         if (flags_.focus_ == FocusState::kFoucusSelf) {
             g.SetColor(colors::kOrange);
             g.FillRect(GetLocalBound());
@@ -38,7 +38,7 @@ public:
     void OnEventGet(const MyEvent& e) override;
 private:
     struct KeyComponent : public Component {
-        void DrawSelf(Graphic& g) override {
+        void DrawSelf(MyGraphic& g) override {
             g.Fill(color_);
         }
 

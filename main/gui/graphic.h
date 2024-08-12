@@ -7,7 +7,7 @@
 #include <cstdint>
 #include "bound.h"
 #include "color.h"
-#include "ll_context.h"
+#include "my_frame.h"
 #include <string_view>
 #include "my_font.h"
 
@@ -20,9 +20,9 @@ enum class MyJustification {
     kRight
 };
 
-class Graphic {
+class MyGraphic {
 public:
-    Graphic(LLContext& context)
+    MyGraphic(MyFrame& context)
         : buffer_bound_{context.GetBound()},
         context_(context) {}
 
@@ -42,18 +42,30 @@ public:
     }
     void SetComponentBound(Bound bound) { component_bound_ = bound; } // do not call this method!
 
-    void SetColor(MyColor color) { color_ = color; }
+    // ================================================================================
+    void SetColor(MyColor color) { context_.SetColor(color); }
+    void DrawPoint(int16_t x, int16_t y, MyColor c) {
+        if (clip_bound_.ContainPoint(x, y))
+            context_.DrawPointColor(x, y, c); 
+    }
+    void DrawPoint(int16_t x, int16_t y) {
+        if (clip_bound_.ContainPoint(x, y))
+            context_.DrawPoint(x, y); 
+    }
+    void DrawPoint(MyPoint p) { DrawPoint(p.x_, p.y_); }
+    void DrawPoint(MyPoint p, MyColor c) { DrawPoint(p.x_, p.y_, c); }
 
+    // ================================================================================
     void Fill(MyColor color) {
-        context_.FillColorRect(clip_bound_, color);
+        context_.FillRect(clip_bound_, color);
     }
 
-    void FillRect(Bound bound) {
+    void FillRect(Bound bound, MyColor c) {
         bound = bound.Shift(component_bound_.x_, component_bound_.y_).GetIntersection(clip_bound_);
-        context_.FillColorRect(bound, color_);
+        context_.FillRect(bound, c);
     }
-    void FillRect(int x, int y, int w, int h) {
-        FillRect(Bound{x, y, w, h});
+    void FillRect(int x, int y, int w, int h, MyColor c) {
+        FillRect(Bound{x, y, w, h}, c);
     }
 
     void DrawRect(Bound bound);
@@ -139,18 +151,6 @@ public:
         // idk
     }
 
-    void SetPixel(MyPoint p) {
-        p.x_ += component_bound_.x_;
-        p.y_ += component_bound_.y_;
-        InternalSetPixelClip(p, color_);
-    }
-
-    void SetPixel(MyPoint p, MyColor c) {
-        p.x_ += component_bound_.x_;
-        p.y_ += component_bound_.y_;
-        InternalSetPixelClip(p, c);
-    }
-
     /**
      * @brief move the draw content
      * @param aera       the aera you want to move
@@ -160,18 +160,9 @@ public:
      */
     void MoveDrawContent(Bound aera, int dx, int dy, MyColor background);
 private:
-    inline void InternalSetPixelClip(MyPoint p, MyColor c) {
-        if (clip_bound_.ContainPoint(p.x_, p.y_))
-            context_.SetColor(p.x_, p.y_, c);
-    }
-    inline void InternalSetPixelClip(MyPoint p) {
-        InternalSetPixelClip(p, color_);
-    }
-
     Bound clip_bound_;
     Bound component_bound_;
     Bound buffer_bound_;
-    MyColor color_;
     MyFont font_;
-    LLContext& context_;
+    MyFrame& context_;
 };
