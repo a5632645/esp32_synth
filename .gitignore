@@ -1,5 +1,8 @@
 build/
 sdkconfig
 sdkconfig.old
-.vscode
-.devcontainer
+.vscode/
+.devcontainer/
+
+wokwi.toml
+diagram.json

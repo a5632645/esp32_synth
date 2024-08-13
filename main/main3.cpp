@@ -61,16 +61,22 @@ static void TwoTask2(void*) {
     // auto tick_begin = esp_timer_get_time();
     for (;;) 
     {
-        int32_t tmp = 0;
-        Dr_Tick(&test, 1, amp, &tmp);
-        printf("%f,%f,%f,%f,%f,%f,%f,%f\n", MyFpS1_14_ToFloat(test.sin0[0]),
-            MyFpS1_14_ToFloat(test.sin0[1]),
-            MyFpS1_14_ToFloat(test.sin0[2]),
-            MyFpS1_14_ToFloat(test.sin0[3]),
-            MyFpS1_14_ToFloat(test.sin0[4]),
-            MyFpS1_14_ToFloat(test.sin0[5]),
-            MyFpS1_14_ToFloat(test.sin0[6]),
-            MyFpS1_14_ToFloat(test.sin0[7]));
+        // int32_t tmp = 0;
+        // Dr_Tick(&test, 1, amp, &tmp);
+        // printf("%f,%f,%f,%f,%f,%f,%f,%f\n", MyFpS1_14_ToFloat(test.sin0[0]),
+        //     MyFpS1_14_ToFloat(test.sin0[1]),
+        //     MyFpS1_14_ToFloat(test.sin0[2]),
+        //     MyFpS1_14_ToFloat(test.sin0[3]),
+        //     MyFpS1_14_ToFloat(test.sin0[4]),
+        //     MyFpS1_14_ToFloat(test.sin0[5]),
+        //     MyFpS1_14_ToFloat(test.sin0[6]),
+        //     MyFpS1_14_ToFloat(test.sin0[7]));
+        for (int i = 0; i < 8; ++i) {       
+            printf(i == 7? "%f\n" : "%f,", MyFpS1_14_ToFloat(test.sin0[i]));
+            auto e = (test.sin1[i] * test.half_coeff[i] >> 14) - test.sin0[i];
+            test.sin0[i] = test.sin1[i];
+            test.sin1[i] = e;
+        }
 
         // auto tick_consumed = esp_timer_get_time() - tick_begin;
 
@@ -105,7 +111,7 @@ static void TwoTask2(void*) {
         //     g.DrawSingleLineText(std::to_string(freqf), 0, 8);
         // }
 
-        vTaskDelay(100);
+        vTaskDelay(10);
         // tick_begin = esp_timer_get_time();
     }
     vTaskDelete(nullptr);

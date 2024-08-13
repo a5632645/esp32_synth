@@ -35,14 +35,14 @@ inline static void MY_CONSTEXPR Dr_Reset(DrData* ptr, uint32_t num, MyFpS0_15* f
         ptr[i].sin0[6] = Phase_FpSin(phase[6 + offset]);
         ptr[i].sin0[7] = Phase_FpSin(phase[7 + offset]);
 
-        ptr[i].sin1[0] = Phase_FpSin(phase[0 + offset] + (freq[0 + offset] >> 1));
-        ptr[i].sin1[1] = Phase_FpSin(phase[1 + offset] + (freq[1 + offset] >> 1));
-        ptr[i].sin1[2] = Phase_FpSin(phase[2 + offset] + (freq[2 + offset] >> 1));
-        ptr[i].sin1[3] = Phase_FpSin(phase[3 + offset] + (freq[3 + offset] >> 1));
-        ptr[i].sin1[4] = Phase_FpSin(phase[4 + offset] + (freq[4 + offset] >> 1));
-        ptr[i].sin1[5] = Phase_FpSin(phase[5 + offset] + (freq[5 + offset] >> 1));
-        ptr[i].sin1[6] = Phase_FpSin(phase[6 + offset] + (freq[6 + offset] >> 1));
-        ptr[i].sin1[7] = Phase_FpSin(phase[7 + offset] + (freq[7 + offset] >> 1));
+        ptr[i].sin1[0] = Phase_FpSin(phase[0 + offset] + freq[0 + offset]);
+        ptr[i].sin1[1] = Phase_FpSin(phase[1 + offset] + freq[1 + offset]);
+        ptr[i].sin1[2] = Phase_FpSin(phase[2 + offset] + freq[2 + offset]);
+        ptr[i].sin1[3] = Phase_FpSin(phase[3 + offset] + freq[3 + offset]);
+        ptr[i].sin1[4] = Phase_FpSin(phase[4 + offset] + freq[4 + offset]);
+        ptr[i].sin1[5] = Phase_FpSin(phase[5 + offset] + freq[5 + offset]);
+        ptr[i].sin1[6] = Phase_FpSin(phase[6 + offset] + freq[6 + offset]);
+        ptr[i].sin1[7] = Phase_FpSin(phase[7 + offset] + freq[7 + offset]);
         
         ptr[i].cos0[0] = Phase_FpCos(phase[0 + offset]);
         ptr[i].cos0[1] = Phase_FpCos(phase[1 + offset]);
@@ -53,14 +53,14 @@ inline static void MY_CONSTEXPR Dr_Reset(DrData* ptr, uint32_t num, MyFpS0_15* f
         ptr[i].cos0[6] = Phase_FpCos(phase[6 + offset]);
         ptr[i].cos0[7] = Phase_FpCos(phase[7 + offset]);
 
-        ptr[i].cos1[0] = Phase_FpCos(phase[0 + offset] + (freq[0 + offset] >> 1));
-        ptr[i].cos1[1] = Phase_FpCos(phase[1 + offset] + (freq[1 + offset] >> 1));
-        ptr[i].cos1[2] = Phase_FpCos(phase[2 + offset] + (freq[2 + offset] >> 1));
-        ptr[i].cos1[3] = Phase_FpCos(phase[3 + offset] + (freq[3 + offset] >> 1));
-        ptr[i].cos1[4] = Phase_FpCos(phase[4 + offset] + (freq[4 + offset] >> 1));
-        ptr[i].cos1[5] = Phase_FpCos(phase[5 + offset] + (freq[5 + offset] >> 1));
-        ptr[i].cos1[6] = Phase_FpCos(phase[6 + offset] + (freq[6 + offset] >> 1));
-        ptr[i].cos1[7] = Phase_FpCos(phase[7 + offset] + (freq[7 + offset] >> 1));
+        ptr[i].cos1[0] = Phase_FpCos(phase[0 + offset] + freq[0 + offset]);
+        ptr[i].cos1[1] = Phase_FpCos(phase[1 + offset] + freq[1 + offset]);
+        ptr[i].cos1[2] = Phase_FpCos(phase[2 + offset] + freq[2 + offset]);
+        ptr[i].cos1[3] = Phase_FpCos(phase[3 + offset] + freq[3 + offset]);
+        ptr[i].cos1[4] = Phase_FpCos(phase[4 + offset] + freq[4 + offset]);
+        ptr[i].cos1[5] = Phase_FpCos(phase[5 + offset] + freq[5 + offset]);
+        ptr[i].cos1[6] = Phase_FpCos(phase[6 + offset] + freq[6 + offset]);
+        ptr[i].cos1[7] = Phase_FpCos(phase[7 + offset] + freq[7 + offset]);
     }
 }
 
@@ -100,21 +100,21 @@ inline static void MY_CONSTEXPR Dr_SetFreq(DrData* ptr, uint32_t num, MyFpS0_15*
         asm volatile(
             "movi a5, 15\n\r"
             "wsr.sar a5\n\r"
-            "ld.qr q0, %[cosw], 0\n\r"
-            "ee.vst.128.ip q0, %[p], 16\n\r" // q0 <= sinw
-            "ee.vld.128.ip q1, %[p], 32\n\r" // q1 <= sin1
-            "ee.vmul.s16.ld.incp q2, %[p], q3, q0, q1\n\r" // q2 <= cos1
-            "addi %[p], %[p], -48\n\r"
-            "ld.qr q4, %[sinw], 0\n\r" // q4 <= cosw
-            "ee.vmul.s16 q5, q2, q4\n\r"
-            "ee.vadds.s16 q6, q3, q5\n\r"
-            "ee.vmul.s16.ld.incp q6, %[p], q5, q2, q4\n\r"
-            "addi %[p], %[p], 16\n\r"
-            "ee.vmul.s16 q3, q1, q0\n\r"
-            "ee.vsubs.s16 q4, q5, q3\n\r"
-            "st.qr q4, %[p], 0\n\r"
+            "ld.qr               q0,   %[c], 0         \n\r"
+            "ee.vst.128.ip       q0,   %[p], 16        \n\r" // q0 <= sinw
+            "ee.vld.128.ip       q1,   %[p], 32        \n\r" // q1 <= sin1
+            "ee.vmul.s16.ld.incp q2,   %[p], q3, q0, q1\n\r" // q2 <= cos1
+            "addi                %[p], %[p], -48       \n\r"
+            "ld.qr               q4,   %[s], 0         \n\r" // q4 <= cosw
+            "ee.vmul.s16         q5,   q2,   q4        \n\r"
+            "ee.vadds.s16        q6,   q3,   q5        \n\r"
+            "ee.vmul.s16.ld.incp q6,   %[p], q5, q2, q4\n\r"
+            "addi                %[p], %[p], 16        \n\r"
+            "ee.vmul.s16         q3,   q1,   q0        \n\r"
+            "ee.vsubs.s16        q4,   q5,   q3        \n\r"
+            "st.qr               q4,   %[p], 0         \n\r"
             :
-            :[p]"r"(ptr), [sinw]"r"(&sinw), [cosw]"r"(&cosw)
+            :[p]"r"(ptr), [s]"r"(&sinw), [c]"r"(&cosw)
             :"a5"
         );
 

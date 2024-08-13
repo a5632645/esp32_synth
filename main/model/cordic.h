@@ -17,7 +17,7 @@ typedef struct {
 } __attribute__((aligned(16))) CordicData;
 
 typedef struct {
-    MyFpS1_14 phase[8]; // -1 ~ 1, -pi ~ pi, -16384 ~ 16384
+    MyFpS0_15 phase[8]; // -1 ~ 1, -pi ~ pi, -32768 ~ 32768
     MyFpS0_15 freq[8];  //  0 ~ 1, 0 ~ pi / 2, 0 ~ 32768
 } __attribute__((aligned(16))) CoridcParamStruct;
 
@@ -32,14 +32,14 @@ inline static MY_CONSTEXPR void Coridc_Reset(CordicData* ptr, uint32_t num, Cori
         ptr[i].y0[6] = Phase_FpSin(reset[i].phase[6]);
         ptr[i].y0[7] = Phase_FpSin(reset[i].phase[7]);
         
-        ptr[i].x0[0] = Phase_FpCos(reset[i].phase[0] - (reset[i].freq[0] >> 1));
-        ptr[i].x0[1] = Phase_FpCos(reset[i].phase[1] - (reset[i].freq[1] >> 1));
-        ptr[i].x0[2] = Phase_FpCos(reset[i].phase[2] - (reset[i].freq[2] >> 1));
-        ptr[i].x0[3] = Phase_FpCos(reset[i].phase[3] - (reset[i].freq[3] >> 1));
-        ptr[i].x0[4] = Phase_FpCos(reset[i].phase[4] - (reset[i].freq[4] >> 1));
-        ptr[i].x0[5] = Phase_FpCos(reset[i].phase[5] - (reset[i].freq[5] >> 1));
-        ptr[i].x0[6] = Phase_FpCos(reset[i].phase[6] - (reset[i].freq[6] >> 1));
-        ptr[i].x0[7] = Phase_FpCos(reset[i].phase[7] - (reset[i].freq[7] >> 1));
+        ptr[i].x0[0] = Phase_FpCos(reset[i].phase[0] - reset[i].freq[0]);
+        ptr[i].x0[1] = Phase_FpCos(reset[i].phase[1] - reset[i].freq[1]);
+        ptr[i].x0[2] = Phase_FpCos(reset[i].phase[2] - reset[i].freq[2]);
+        ptr[i].x0[3] = Phase_FpCos(reset[i].phase[3] - reset[i].freq[3]);
+        ptr[i].x0[4] = Phase_FpCos(reset[i].phase[4] - reset[i].freq[4]);
+        ptr[i].x0[5] = Phase_FpCos(reset[i].phase[5] - reset[i].freq[5]);
+        ptr[i].x0[6] = Phase_FpCos(reset[i].phase[6] - reset[i].freq[6]);
+        ptr[i].x0[7] = Phase_FpCos(reset[i].phase[7] - reset[i].freq[7]);
 
         ptr[i].half_coef[0] = Freq_FpSin(reset[i].freq[0]);
         ptr[i].half_coef[1] = Freq_FpSin(reset[i].freq[1]);
