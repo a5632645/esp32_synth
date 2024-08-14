@@ -11,7 +11,7 @@ struct MyColorTraits<St7735Color> {
     using type = uint16_t;
 
     static constexpr type ColorTransform(MyColor c) {
-        type cc = MyColorTraits<MyBGR565>::ColorTransform(c);
+        type cc = MyColorTraits<MyRGB565>::ColorTransform(c);
         return (cc << 8) | (cc >> 8);
     }
 };

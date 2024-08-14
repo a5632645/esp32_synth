@@ -16,7 +16,8 @@
 
 #include "ui/top_window.h"
 #include "ui/my_events.h"
-#include "ui/st7735_driver.h"
+// #include "ui/st7735_driver.h"
+#include "ui/lcd_driver2.h"
 
 #include "model/synth_model.h"
 #include "model/poly_synth.h"
@@ -153,18 +154,22 @@ public:
     bool show_ = true;
 };
 
-static St7735Driver driver;
+static LcdDriver2 driver;
 
 static void MyLcdTask(void*) {
     // timer queue init
     xTaskCreate(TimerQueueTask, "TimerQueueTask", 2048, NULL, 5, NULL);
     
-    // ll driver init
+    // driver init
     driver.Init();
 
     // gui init
     static ComponentPeer peer1 {&driver};
+
+    // DebugPanel debug;
     peer1.SetComponent(top_window);
+    // peer1.SetComponent(&debug);
+    // debug.Resume();
 
     // timer task init
     StaticsComponent statics;
@@ -181,21 +186,21 @@ static void MyLcdTask(void*) {
     };
     TimerQueue::GetInstance().AddTimer(&statics_task, false);
 
-    { // keyboard init
-        // static const int row_gpio[] = {46, 3, 8, 18};
-        static const int row_gpio[] = {18, 8, 3, 46};
-        static const int col_gpio[] = {9, 10, 11, 12};
-            MatrixKeyboardConfigT matrix_config = {
-            .callback = MKCallback,
-            .data = &peer1,
-            .row_gpio = row_gpio,
-            .row_count = 4,
-            .col_gpio = col_gpio,
-            .col_count = 4,
-            .use_async_task = true
-        };
-        MatrixKeyboard_Init(&matrix_config);
-    }
+    // { // keyboard init
+    //     // static const int row_gpio[] = {46, 3, 8, 18};
+    //     static const int row_gpio[] = {18, 8, 3, 46};
+    //     static const int col_gpio[] = {9, 10, 11, 12};
+    //         MatrixKeyboardConfigT matrix_config = {
+    //         .callback = MKCallback,
+    //         .data = &peer1,
+    //         .row_gpio = row_gpio,
+    //         .row_count = 4,
+    //         .col_gpio = col_gpio,
+    //         .col_count = 4,
+    //         .use_async_task = true
+    //     };
+    //     MatrixKeyboard_Init(&matrix_config);
+    // }
 
     auto& mq = MsgQueue::GetInstance();
     auto tick = xTaskGetTickCount();
@@ -232,17 +237,17 @@ extern "C" void app_main(void) {
     top_window = new TopWindow();
     poly_gen = new PolySynth<AddOsc>();
 
-    I2sAudioConfigT i2s_config {
-        .callback = AudioCallback,
-        .i2s_port = I2S_NUM_0,
-        .sample_rate = 48000,
-        .bck_gpio = 16,
-        .ws_gpio = 15,
-        .out_gpio = 17,
-        .channel_count = I2S_SLOT_MODE_MONO
-    };
-    poly_gen->Init(static_cast<float>(i2s_config.sample_rate));
-    I2sAudioInit(&i2s_config);
+    // I2sAudioConfigT i2s_config {
+    //     .callback = AudioCallback,
+    //     .i2s_port = I2S_NUM_0,
+    //     .sample_rate = 48000,
+    //     .bck_gpio = 16,
+    //     .ws_gpio = 15,
+    //     .out_gpio = 17,
+    //     .channel_count = I2S_SLOT_MODE_MONO
+    // };
+    // poly_gen->Init(static_cast<float>(i2s_config.sample_rate));
+    // I2sAudioInit(&i2s_config);
 
     // UartMidiConfigT midi_config = {
     //     .handler = UartMidiCallback,

@@ -80,3 +80,11 @@ void MyColoredFrame<T>::MoveDrawContentVetical(const Bound& aera, int offset, bo
                         GetPtr(y, aera.x_));
     }
 }
+
+template<class T>
+void MyColoredFrame<T>::DrawFrameAt(const MyColoredFrame<T>& other, const Bound& mask, MyPoint pos) {
+    for (int y = 0; y < mask.h_; ++y)
+        std::copy_n(other.GetPtr(mask.x_, mask.y_ + y),
+                    mask.w_,
+                    GetPtr(pos.x_, pos.y_ + y));
+}

@@ -23,8 +23,10 @@ enum class MyJustification {
 class MyGraphic {
 public:
     MyGraphic(MyFrame* context)
-        : buffer_bound_{context->GetBound()},
-        context_(context) {}
+        : clip_bound_(context->GetBound())
+        , component_bound_{context->GetBound()}
+        , buffer_bound_{context->GetBound()}
+        , context_(context) {}
 
     void SetClipBoundGlobal(Bound bound) { // do not call this method!
          clip_bound_ = bound;
@@ -56,6 +58,22 @@ public:
     void DrawPoint(MyPoint p, MyColor c) { DrawPoint(p.x_, p.y_, c); }
 
     // ================================================================================
+    template<typename T>
+    void DrawFrame(MyColoredFrame<T>& other, Bound mask, MyPoint pos) {
+        auto b = mask.Shift(pos.x_, pos.y_);
+        b = b.GetIntersectionUncheck(other.GetBound());
+        if (!b.IsValid())
+            return;
+
+        b.Shifted(component_bound_.x_, component_bound_.y_);
+        b = b.GetIntersectionUncheck(clip_bound_);
+        if (!b.IsValid())
+            return;
+
+        auto& f = context_->As<MyColoredFrame<T>>();
+        f.DrawFrameAt(other, b, MyPoint{pos.x_ + component_bound_.x_, pos.y_ + component_bound_.y_});
+    }
+
     void Fill(MyColor color) {
         context_->FillRect(clip_bound_, color);
     }

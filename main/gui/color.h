@@ -6,6 +6,13 @@
 
 #include <cstdint>
 
+enum MyColorEnums {
+    kMyColor_RGB888,
+    kMyColor_RGB565,
+    kMyColor_BGR565,
+    kMyColor_Mono
+};
+
 struct MyColor {
     uint8_t r;
     uint8_t g;

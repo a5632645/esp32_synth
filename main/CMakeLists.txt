@@ -6,7 +6,9 @@ set (GUI_SOURCES
     "gui/timer_queue.cpp"
 
     "ui/st7735_color.cpp"
-    "ui/st7735_driver.cpp"
+    # "ui/st7735_driver.cpp"
+    "ui/lcd_driver2.cpp"
+    "ui/ili9340.c"
 
     "ui/debug_panel.cpp"
     "ui/keyboard_panel.cpp"

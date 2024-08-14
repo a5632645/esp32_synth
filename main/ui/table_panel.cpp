@@ -6,6 +6,8 @@ TablePanel::TablePanel() {
     AddChild(&tab_bar_);
     AddChild(&setting_panel_);
     AddChild(&keyboard_);
+
+    InternalSwitchComponent(1);
 }
 
 void TablePanel::OnEventGet(const MyEvent& e) {
@@ -44,6 +46,7 @@ void TablePanel::InternalSwitchComponent(uint16_t index) {
         ReplaceChild(1, &setting_panel_);
         break;
     case 1:
+        ReplaceChild(1, &tracker_panel_);
         break;
     case 2:
         ReplaceChild(1, &debug_panel_);

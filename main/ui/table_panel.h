@@ -7,6 +7,7 @@
 #include "keyboard_panel.h"
 #include "setting_panel.h"
 #include "debug_panel.h"
+#include "tracker_panel.h"
 
 class TablePanel : public Component {
 public:
@@ -42,4 +43,5 @@ private:
     uint16_t comp_select_index = 0;
     SettingPanel setting_panel_;
     DebugPanel debug_panel_;
+    TrackerComponent tracker_panel_;
 };
