@@ -2,7 +2,7 @@
 #include "component.h"
 
 void ComponentPeer::AddInvalidRect(Bound bound) {
-    bound = bound.GetIntersectionUncheck(context_frame_->GetBound());
+    bound = bound.GetIntersectionUncheck(buffer_bound_);
 
     if (!bound.IsValid())
         return;
@@ -46,7 +46,7 @@ void ComponentPeer::FlushInvalidRects() {
     int bottom = dirty_aera.y_ + dirty_aera.h_;
     context_->BeginFrame();
     for (auto& b : invalid_rects_) {
-        component_->InternalPaint(g, b);
+        component_->_Paint(g, b);
         context_->AeraDrawed(b);
 
         dirty_aera.x_ = std::min(dirty_aera.x_, b.x_);
@@ -82,8 +82,6 @@ void ComponentPeer::SetComponent(Component *owner) {
 
     invalid_rects_.clear();
     invalid_rects_cache_.clear();
-    if (context_ == nullptr)
-        return;
-    owner->SetBound(context_frame_->GetBound());
-    owner->Repaint();
+    if (owner != nullptr)
+        owner->SetBound(buffer_bound_);
 }

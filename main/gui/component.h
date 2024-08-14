@@ -6,7 +6,7 @@
 
 #include <vector>
 #include <algorithm>
-#include "graphic.h"
+#include "my_graphic.h"
 #include "component_peer.h"
 
 struct MyEvent {
@@ -62,7 +62,7 @@ public:
         auto b = global_bound_.Shift(bound.x_, bound.y_);
         b.w_ = bound.w_;
         b.h_ = bound.h_;
-        InternalRepaint(b);
+        _Repaint(b);
     }
     void Repaint() {
         Repaint(GetLocalBound()); 
@@ -102,9 +102,10 @@ public:
 protected:
     friend class ComponentPeer;
 
-    void InternalPaint(MyGraphic& g, Bound repaint_bound);
-    void InternalRepaint(Bound repaint_bound);
-
+    void _Paint(MyGraphic& g, Bound repaint_bound);
+    void _Repaint(Bound repaint_bound);
+    void _SetParent(Component* parent);
+    
     // bounding
     std::vector<Component*> children_;
     ComponentPeer* peer_ = nullptr;

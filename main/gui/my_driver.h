@@ -15,5 +15,5 @@ public:
     virtual void AeraDrawed(const Bound& bound) = 0;
     virtual void EndFrame(const Bound& bound) = 0;
 
-    virtual MyFrame& GetFrame() = 0;
+    virtual MyFrame* GetFrame() = 0;
 };

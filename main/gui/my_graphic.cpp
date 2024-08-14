@@ -1,4 +1,4 @@
-#include "graphic.h"
+#include "my_graphic.h"
 
 #include <cmath>
 
@@ -7,16 +7,16 @@ void MyGraphic::DrawRect(Bound bound) {
     auto limit_x = std::max(clip_bound_.x_, bound.x_);
     auto limit_w = std::min(bound.w_ + bound.x_, clip_bound_.w_ + clip_bound_.x_) - limit_x;
     if (bound.y_ >= clip_bound_.y_)
-        context_.DrawHorizenLine(bound.y_, limit_x, limit_w);
+        context_->DrawHorizenLine(bound.y_, limit_x, limit_w);
     if (bound.Bottom() <= clip_bound_.Bottom())
-        context_.DrawHorizenLine(bound.Bottom(), limit_x, limit_w);
+        context_->DrawHorizenLine(bound.Bottom(), limit_x, limit_w);
 
     auto limit_y = std::max(0, bound.y_);
     auto limit_h = std::min(bound.h_ + bound.y_, clip_bound_.h_ + clip_bound_.y_) - limit_y;
     if (bound.x_ >= clip_bound_.x_)
-        context_.DrawVeticalLine(bound.x_, limit_y, limit_h);
+        context_->DrawVeticalLine(bound.x_, limit_y, limit_h);
     if (bound.Right() <= clip_bound_.Right())
-        context_.DrawVeticalLine(bound.Right(), limit_y, limit_h);
+        context_->DrawVeticalLine(bound.Right(), limit_y, limit_h);
 }
 
 void MyGraphic::DrawHorizenLine(int x, int y, int w) {
@@ -26,7 +26,7 @@ void MyGraphic::DrawHorizenLine(int x, int y, int w) {
     x += component_bound_.x_;
     auto real_x = std::max(clip_bound_.x_, x);
     auto real_w = std::min(clip_bound_.w_ + clip_bound_.x_, w + x) - real_x;
-    context_.DrawHorizenLine(y, real_x, real_w);
+    context_->DrawHorizenLine(y, real_x, real_w);
 }
 
 void MyGraphic::DrawVeticalLine(int x, int y, int h) {
@@ -36,7 +36,7 @@ void MyGraphic::DrawVeticalLine(int x, int y, int h) {
     y += component_bound_.y_;
     auto real_y = std::max(clip_bound_.y_, y);
     auto real_h = std::min(clip_bound_.h_ + clip_bound_.y_, h + y) - real_y;
-    context_.DrawHorizenLine(x, real_y, real_h);
+    context_->DrawVeticalLine(x, real_y, real_h);
 }
 
 void MyGraphic::DrawLine(int x1, int y1, int x2, int y2) {
@@ -83,7 +83,7 @@ void MyGraphic::DrawLine(int x1, int y1, int x2, int y2) {
     }
 }
 
-void MyGraphic::DrawSingleLineText(std::string_view text, int x, int y, int w) { // TODO: justification
+void MyGraphic::DrawSingleLineText(std::string_view text, int x, int y, int w) {
     if (text.empty())
         return;
 
@@ -127,7 +127,7 @@ void MyGraphic::DrawSingleLineText(std::string_view text, int x, int y, int w) {
         int mask_len = real_right_x - real_left_x;
         for (int j = y_top; j < y_bottom; ++j) {
             font_.GetMask(c, j - y, mask);
-            context_.DrawHorizenLineMask(j, real_left_x, mask_len, mask + mask_x_offset);
+            context_->DrawHorizenLineMask(j, real_left_x, mask_len, mask + mask_x_offset);
         }
 
         left_x = right_x;
@@ -224,7 +224,7 @@ void MyGraphic::FillEllipe(Bound bound) {
         auto right = static_cast<int>(center.x_ + dx);
         left = std::max(left, clip_bound_.x_);
         right = std::min(right, clip_bound_.x_ + clip_bound_.w_);
-        context_.DrawHorizenLine(y + center.y_, left, right - left);
+        context_->DrawHorizenLine(y + center.y_, left, right - left);
     }
 }
 
@@ -240,22 +240,22 @@ void MyGraphic::MoveDrawContent(Bound aera, int dx, int dy, MyColor background) 
     dy = std::abs(dy);
 
     if (dx >= aera.w_ || dy >= aera.h_) {
-        context_.FillRect(aera, background);
+        context_->FillRect(aera, background);
         return;
     }
 
     if (dx != 0) {
-        context_.MoveDrawContentHorizen(aera, dx, left);
+        context_->MoveDrawContentHorizen(aera, dx, left);
         if (left)
-            context_.FillRect({aera.x_ + aera.w_ - dx, aera.y_, dx, aera.h_}, background);
+            context_->FillRect({aera.x_ + aera.w_ - dx, aera.y_, dx, aera.h_}, background);
         else
-            context_.FillRect({aera.x_, aera.y_, dx, aera.h_}, background);
+            context_->FillRect({aera.x_, aera.y_, dx, aera.h_}, background);
     }
     if (dy != 0) {
-        context_.MoveDrawContentVetical(aera, dy, up);
+        context_->MoveDrawContentVetical(aera, dy, up);
         if (up)
-            context_.FillRect({aera.x_, aera.y_ + aera.h_ - dy, aera.w_, dy}, background);
+            context_->FillRect({aera.x_, aera.y_ + aera.h_ - dy, aera.w_, dy}, background);
         else
-            context_.FillRect({aera.x_, aera.y_, aera.w_, dy}, background);
+            context_->FillRect({aera.x_, aera.y_, aera.w_, dy}, background);
     }
 }

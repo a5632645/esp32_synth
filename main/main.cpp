@@ -4,33 +4,34 @@
 #include <esp_log.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
+#include <esp_timer.h>
+
 #include "i2s_audio.h"
-#include "uart_midi.h"
 #include "keyboard.h"
 #include "my_adc.h"
-#include "lcd.h"
-#include "gui/component.h"
+
 #include "gui/msg_queue.h"
 #include "gui/timer_queue.h"
 #include "gui/component_peer.h"
-#include "st7735_ll_contex.h"
+
 #include "ui/top_window.h"
 #include "ui/my_events.h"
-#include <string.h>
+#include "ui/st7735_driver.h"
+
 #include "model/synth_model.h"
 #include "model/poly_synth.h"
 #include "model/add_osc.h"
 
-static PolySynth<AddOsc> poly_gen;
-static TopWindow top_window;
+static PolySynth<AddOsc>* poly_gen;
+static TopWindow* top_window;
 
 // ================================================================================
 // audio
 // ================================================================================
 static void AudioCallback(void* buf, int len) {
     int16_t* buffer = (int16_t*)buf;
-    poly_gen.Process(buffer, len);
-    auto* osc = (OscPanel*)top_window.GetChildUncheck(1);
+    poly_gen->Process(buffer, len);
+    auto* osc = (OscPanel*)top_window->GetChildUncheck(1);
     osc->PushSample(buffer, len);
 }
 
@@ -40,23 +41,23 @@ static void AudioCallback(void* buf, int len) {
 static void UartMidiCallback(uint8_t* buffer, int len) {
     uint8_t head = buffer[0] >> 4;
     if (head == 9) {
-        poly_gen.NoteOn(buffer[1], buffer[2] / 127.0f);
+        poly_gen->NoteOn(buffer[1], buffer[2] / 127.0f);
         ESP_LOGI("midi", "note on: %d %d", (int)buffer[1], (int)buffer[2]);
     }
     else if (head == 8) {
-        poly_gen.NoteOff(buffer[1], buffer[2] / 127.0f);
+        poly_gen->NoteOff(buffer[1], buffer[2] / 127.0f);
         ESP_LOGI("midi", "note off: %d %d", (int)buffer[1], (int)buffer[2]);
     }
 }
 
 static void NoteOn(int note, float velocity) {
-    poly_gen.NoteOn(note, velocity);
-    top_window.GetKeyboardPanel().NoteOn(note);
+    poly_gen->NoteOn(note, velocity);
+    top_window->GetKeyboardPanel().NoteOn(note);
 }
 
 static void NoteOff(int note, float velocity) {
-    poly_gen.NoteOff(note, velocity);
-    top_window.GetKeyboardPanel().NoteOff(note);
+    poly_gen->NoteOff(note, velocity);
+    top_window->GetKeyboardPanel().NoteOff(note);
 }
 
 // ================================================================================
@@ -77,7 +78,7 @@ static void MKCallback(void* data, int row, int col, MKKeyStateEnum state) {
                 .event_type = st == MKKeyStateEnum::MK_KEY_UP ? events::kButtonUp : events::kButtonDown,
                 .sub_type = (uint16_t)ii
             };
-            top_window.OnEventGet(ee);
+            top_window->OnEventGet(ee);
         }
     });
 
@@ -141,25 +142,29 @@ class StaticsComponent : public Component {
 public:
     void DrawSelf(MyGraphic& g) override {
         g.SetColor(colors::kRed);
-        g.DrawSingleLineText(std::to_string(drawed_per_sec), 0, 0);
+        if (show_)
+            g.DrawSingleLineText(std::to_string(drawed_per_sec) + "fps", 0, 0);
+        else 
+            g.DrawSingleLineText(std::to_string(draw_us_) + "us", 0, 0);
     }
 
     int drawed_per_sec = 0;
+    int draw_us_ = 0;
+    bool show_ = true;
 };
+
+static St7735Driver driver;
 
 static void MyLcdTask(void*) {
     // timer queue init
     xTaskCreate(TimerQueueTask, "TimerQueueTask", 2048, NULL, 5, NULL);
     
     // ll driver init
-    static St7735LLContext ll_context;
-    spi_master_init(&ll_context.dev, 2, 1, 41, 40, 42);
-    lcdInit(&ll_context.dev, 128, 160, 0, 0);
-    lcdDisplayOn(&ll_context.dev);
+    driver.Init();
 
     // gui init
-    ComponentPeer peer1 {&ll_context};
-    peer1.SetComponent(&top_window);
+    static ComponentPeer peer1 {&driver};
+    peer1.SetComponent(top_window);
 
     // timer task init
     StaticsComponent statics;
@@ -203,13 +208,17 @@ static void MyLcdTask(void*) {
 
         if (peer1.HasInvalidRects())
             ++drawed;
+
+        auto tt_begin = esp_timer_get_time();
         peer1.FlushInvalidRects();
+        statics.draw_us_ = esp_timer_get_time() - tt_begin;
 
         auto new_tick = xTaskGetTickCount();
         if (new_tick - tick > kTicksPerSec) {
             statics.drawed_per_sec = drawed;
             drawed = 0;
             tick = new_tick;
+            statics.show_ = !statics.show_;
         }
         vTaskDelay(pdMS_TO_TICKS(20));
     }
@@ -220,6 +229,9 @@ static void MyLcdTask(void*) {
 // app
 // ================================================================================
 extern "C" void app_main(void) {
+    top_window = new TopWindow();
+    poly_gen = new PolySynth<AddOsc>();
+
     I2sAudioConfigT i2s_config {
         .callback = AudioCallback,
         .i2s_port = I2S_NUM_0,
@@ -229,18 +241,18 @@ extern "C" void app_main(void) {
         .out_gpio = 17,
         .channel_count = I2S_SLOT_MODE_MONO
     };
-    poly_gen.Init(static_cast<float>(i2s_config.sample_rate));
+    poly_gen->Init(static_cast<float>(i2s_config.sample_rate));
     I2sAudioInit(&i2s_config);
 
-    UartMidiConfigT midi_config = {
-        .handler = UartMidiCallback,
-        .uart_port = UART_NUM_0,
-        .rx_gpio = UART_PIN_NO_CHANGE,
-        .tx_gpio = UART_PIN_NO_CHANGE,
-        .rts_gpio = UART_PIN_NO_CHANGE,
-        .cts_gpio = UART_PIN_NO_CHANGE
-    };
-    UartMidi_Init(&midi_config);
+    // UartMidiConfigT midi_config = {
+    //     .handler = UartMidiCallback,
+    //     .uart_port = UART_NUM_0,
+    //     .rx_gpio = UART_PIN_NO_CHANGE,
+    //     .tx_gpio = UART_PIN_NO_CHANGE,
+    //     .rts_gpio = UART_PIN_NO_CHANGE,
+    //     .cts_gpio = UART_PIN_NO_CHANGE
+    // };
+    // UartMidi_Init(&midi_config);
 
     xTaskCreate(AdcTask, "AdcTask", 4096, NULL, 5, NULL);
     xTaskCreate(MyLcdTask, "LcdTask", 8192, NULL, 4, NULL);

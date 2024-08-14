@@ -7,83 +7,101 @@
 #include "color.h"
 #include "bound.h"
 
-// buffer are always y * w + x
+// buffer are always y * w + x or draw command(?)
 class MyFrame {
 public:
+    MyFrame() : buffer_(nullptr), w_(0), h_(0) {}
+    explicit MyFrame(void* buffer, int w, int h) : buffer_(buffer), w_(w), h_(h) {}
     virtual ~MyFrame() = default;
 
-    virtual void SetColor(MyColor c) = 0;
-    virtual void DrawPoint(int16_t x, int16_t y) = 0;
-    virtual void DrawPointColor(int16_t x, int16_t y, MyColor c) = 0;
-    virtual void DrawHorizenLine(int16_t y, int16_t x, int16_t w) = 0;
-    virtual void DrawVeticalLine(int16_t x, int16_t y, int16_t h) = 0;
-    virtual void FillRect(const Bound& bound, MyColor c) = 0;
-    virtual void DrawHorizenLineMask(int16_t y, int16_t x, int16_t w, uint8_t* alpha_mask) = 0;
+    void SetBuffer(void* buffer, int w, int h) {
+        buffer_ = buffer;
+        w_ = w;
+        h_ = h;
+    }
 
-    virtual void MoveDrawContentHorizen(const Bound& aera, int16_t offset, bool left) = 0;
-    virtual void MoveDrawContentVetical(const Bound& aera, int16_t offset, bool up) = 0;
+    virtual void SetColor(MyColor c) = 0;
+    virtual void DrawPoint(int x, int y) = 0;
+    virtual void DrawPointColor(int x, int y, MyColor c) = 0;
+    virtual void DrawHorizenLine(int y, int x, int w) = 0;
+    virtual void DrawVeticalLine(int x, int y, int h) = 0;
+    virtual void FillRect(const Bound& bound, MyColor c) = 0;
+    virtual void DrawHorizenLineMask(int y, int x, int w, uint8_t* alpha_mask) = 0;
+
+    virtual void MoveDrawContentHorizen(const Bound& aera, int offset, bool left) = 0;
+    virtual void MoveDrawContentVetical(const Bound& aera, int offset, bool up) = 0;
 
     Bound GetBound() const {
         return Bound{ 0, 0, w_, h_ };
     }
 protected:
-    int16_t w_ {};
-    int16_t h_ {};
+    void* buffer_{};
+    int w_ {};
+    int h_ {};
 };
 
-namespace frame_colors {
-using RGB888 = uint32_t;
-using RGB565 = uint16_t;
-using BGR565 = uint16_t;
-using RGB332 = uint8_t;
-using Mono = uint8_t; 
+// some color type
+using MyRGB888 = struct { using type = uint32_t; };
+using MyRGB565 = struct { using type = uint16_t; };
+using MyBGR565 = struct { using type = uint16_t; };
+using MyRGB332 = struct { using type = uint8_t; };
+using MyMono = struct { using type = uint8_t; };
 
+// a color traits
 template<typename T>
-inline static constexpr T ColorTransform(MyColor c) {
-    if constexpr (std::is_same_v<T, RGB888>) {
-        return static_cast<T>(((c.r & 0xFF) << 16) | ((c.g & 0xFF) << 8) | (c.b & 0xFF));
-    }
-    else if constexpr (std::is_same_v<T, RGB565>) {
-        return static_cast<T>(((c.r & 0xF8) << 8) | ((c.g & 0xFC) << 3) | (c.b >> 3));
-    }
-    else if constexpr (std::is_same_v<T, BGR565>) {
-        return static_cast<T>(((c.b & 0xF8) << 8) | ((c.g & 0xFC) << 3) | (c.r >> 3));
-    }
-    else if constexpr (std::is_same_v<T, RGB332>) {
-        return static_cast<T>((c.r >> 5) | ((c.g >> 5) << 5) | ((c.b >> 6) << 10));
-    }
-    else if constexpr (std::is_same_v<T, Mono>) {
-        return static_cast<T>((c.r | c.g | c.b) == 0 ? 1 : 0);
-    }
-    else {
-        static_assert(false, "unknown color type");
-    }
-}
-}
+struct MyColorTraits {
+    using type = typename T::type;
 
+    static constexpr type ColorTransform(MyColor c) {
+        return {};
+    }
+};
+
+// implement frame for some color type
 template<class T>
 class MyColoredFrame : public MyFrame {
 public:
-    void SetColor(MyColor c) override { color_ = frame_colors::ColorTransform<T>(c); }
-    void DrawPoint(int16_t x, int16_t y) override { *GetPtr(x, y) = color_; }
-    void DrawPointColor(int16_t x, int16_t y, MyColor c) override { *GetPtr(x, y) = frame_colors::ColorTransform<T>(c); }
-    void DrawHorizenLine(int16_t y, int16_t x, int16_t w) override;
-    void DrawVeticalLine(int16_t x, int16_t y, int16_t h) override;
+    using ColorType = typename MyColorTraits<T>::type;
+    using MyFrame::MyFrame;
+
+    void SetColor(MyColor c) override;
+    void DrawPoint(int x, int y) override;
+    void DrawPointColor(int x, int y, MyColor c) override;
+    void DrawHorizenLine(int y, int x, int w) override;
+    void DrawVeticalLine(int x, int y, int h) override;
     void FillRect(const Bound& bound, MyColor c) override;
-    void DrawHorizenLineMask(int16_t y, int16_t x, int16_t w, uint8_t* alpha_mask) override;
+    void DrawHorizenLineMask(int y, int x, int w, uint8_t* alpha_mask) override;
 
-    void MoveDrawContentHorizen(const Bound& aera, int16_t offset, bool left) override;
-    void MoveDrawContentVetical(const Bound& aera, int16_t offset, bool up) override;
+    void MoveDrawContentHorizen(const Bound& aera, int offset, bool left) override;
+    void MoveDrawContentVetical(const Bound& aera, int offset, bool up) override;
 
-    T* GetPtr(int16_t x, int16_t y) {
-        return buffer_ + y * w_ + x;
+    ColorType* GetPtr(int x, int y) {
+        return static_cast<ColorType*>(buffer_) + y * w_ + x;
     }
 private:
-    T color_   {};
-    T* buffer_ {};
+    ColorType color_ {};
 };
 
 template<>
-class MyColoredFrame<frame_colors::Mono> : public MyFrame {
+struct MyColorTraits<MyRGB888> {
+    using type = uint32_t;
+    static constexpr type ColorTransform(MyColor c) {
+        return ((c.r & 0xFF) << 16) | ((c.g & 0xFF) << 8) | (c.b & 0xFF);
+    }
 };
 
+template<>
+struct MyColorTraits<MyRGB565> {
+    using type = uint16_t;
+    static constexpr type ColorTransform(MyColor c) {
+        return ((c.r & 0xF8) << 8) | ((c.g & 0xFC) << 3) | (c.b >> 3);
+    }
+};
+
+template<>
+struct MyColorTraits<MyBGR565> {
+    using type = uint16_t;
+    static constexpr type ColorTransform(MyColor c) {
+        return ((c.b & 0xF8) << 8) | ((c.g & 0xFC) << 3) | (c.r >> 3);
+    }
+};

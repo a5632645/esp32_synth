@@ -7,8 +7,7 @@ void Component::AddChild(Component* child) {
     if (child->parent_ != nullptr)
         child->parent_->RemoveChild(child);
 
-    child->parent_ = this;
-    child->flags_.focus_ = FocusState::kFoucusParent;
+    child->_SetParent(this);
     children_.push_back(child);
 }
 
@@ -16,8 +15,7 @@ void Component::RemoveChild(Component* child) {
     if (child == nullptr || child->parent_ != this || child == this)
         return;
 
-    child->parent_ = nullptr;
-    child->flags_.focus_ = FocusState::kFoucusSelf;
+    child->_SetParent(nullptr);
     children_.erase(std::remove(children_.begin(), children_.end(), child));
 }
 
@@ -26,15 +24,13 @@ void Component::RemoveChild(size_t index) {
         return;
 
     auto* child = children_[index];
-    child->parent_ = nullptr;
-    child->flags_.focus_ = FocusState::kFoucusSelf;
+    child->_SetParent(nullptr);
     children_.erase(children_.begin() + index);
 }
 
 void Component::RemoveAllChild() {
-    for (auto* child : children_) {
-        child->parent_ = nullptr;
-    }
+    for (auto* child : children_)
+        child->_SetParent(nullptr);
     children_.clear();
 }
 
@@ -47,21 +43,19 @@ void Component::ReplaceChild(size_t index, Component* child) {
 
     auto* old = children_[index];
     auto old_bound = old->GetBoundInParent();
-    old->parent_ = nullptr;
-    old->flags_.focus_ = FocusState::kFoucusSelf;
+    old->_SetParent(nullptr);
     children_[index] = child;
-    child->parent_ = this;
-    child->flags_.focus_ = FocusState::kFoucusParent;
+    child->_SetParent(this);
     child->SetBound(old_bound);
 }
 
 void Component::SetBound(Bound bound) {
     if (bound_parent_ == bound) {
-        InternalRepaint(global_bound_);
+        _Repaint(global_bound_);
         return;
     }
 
-    InternalRepaint(global_bound_); // invalid old aera
+    _Repaint(global_bound_); // invalid old aera
     
     bound_parent_ = bound;
     if(parent_ == nullptr) {
@@ -73,17 +67,12 @@ void Component::SetBound(Bound bound) {
         global_bound_.w_ = bound.w_;
         global_bound_.h_ = bound.h_;
     }
-    InternalRepaint(global_bound_); // repaint new aera
+    _Repaint(global_bound_); // repaint new aera
     Resized();
 }
 
 Component::~Component() {
-    for (auto* child : children_) {
-        child->parent_ = nullptr;
-        child->flags_.focus_ = FocusState::kFoucusSelf;
-        child->SetBound(child->GetLocalBound());
-    }
-    flags_.focus_ = FocusState::kFoucusSelf;
+    RemoveAllChild();
 }
 
 void Component::BringToFront() {
@@ -110,8 +99,7 @@ void Component::BringToBack() {
     Repaint();
 }
 
-void Component::InternalPaint(MyGraphic &g, Bound repaint_bound)
-{
+void Component::_Paint(MyGraphic& g, Bound repaint_bound) {
     auto intersection = global_bound_.GetIntersectionUncheck(repaint_bound);
     if(!intersection.IsValid())
         return;
@@ -120,21 +108,32 @@ void Component::InternalPaint(MyGraphic &g, Bound repaint_bound)
     g.SetComponentBound(global_bound_);
     DrawSelf(g);
     for (auto* child : children_)
-        child->InternalPaint(g, intersection);
-    
+        child->_Paint(g, intersection);
+
     g.SetClipBoundGlobal(intersection);
     g.SetComponentBound(global_bound_);
     DrawAboveChild(g);
 }
 
-void Component::InternalRepaint(Bound repaint_bound) {
+void Component::_Repaint(Bound repaint_bound) {
     if (parent_ != nullptr) {
-        parent_->InternalRepaint(repaint_bound);
+        parent_->_Repaint(repaint_bound);
         return;
     }
 
-    if (peer_ == nullptr)
+    if (peer_ != nullptr)
+        peer_->AddInvalidRect(repaint_bound);
+}
+
+void Component::_SetParent(Component* parent) {
+    if (parent_ == parent)
         return;
 
-    peer_->AddInvalidRect(repaint_bound);
+    parent_ = parent;
+    if (parent_ == nullptr) {
+        flags_.focus_ = FocusState::kFoucusSelf;
+    }
+    else {
+        flags_.focus_ = FocusState::kFoucusParent;
+    }
 }

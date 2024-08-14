@@ -7,7 +7,7 @@
 #include <vector>
 #include "bound.h"
 #include "my_driver.h"
-#include "graphic.h"
+#include "my_graphic.h"
 
 class Component;
 
@@ -16,7 +16,7 @@ public:
     ComponentPeer(MyDriver* context) : context_(context) {
         invalid_rects_.reserve(16);
         invalid_rects_cache_.reserve(16);
-        context_frame_ = &context->GetFrame();
+        buffer_bound_ = context->GetFrame()->GetBound();
     }
 
     /**
@@ -57,5 +57,5 @@ private:
     std::vector<Bound> invalid_rects_;
     Component* component_ = nullptr;
     MyDriver* context_ = nullptr;
-    MyFrame* context_frame_ = nullptr;
+    Bound buffer_bound_;
 };

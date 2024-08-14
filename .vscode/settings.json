@@ -104,7 +104,8 @@
         "variant": "cpp",
         "synth_model.h": "c",
         "i2s_std.h": "c",
-        "my_fp.h": "c"
+        "my_fp.h": "c",
+        "*.impl": "cpp"
     },
     "idf.flashType": "UART",
     "idf.gitPathWin": "c:\\Users\\Kawai\\esp\\esp-idf-v5.3-rc1\\tools\\tools\\idf-git\\2.39.2\\cmd\\git.exe"

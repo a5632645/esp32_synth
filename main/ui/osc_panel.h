@@ -5,6 +5,14 @@
 
 class OscPanel : public Component {
 public:
+    OscPanel() {
+        task_ = TimerTask {
+            [this]{ finishing_ = true; return false; },
+            100
+        };
+        TimerQueue::GetInstance().AddTimer(&task_, false, true);
+    }
+
     void DrawSelf(MyGraphic& g) override {
         auto cb = g.GetClipBound();
         auto b = GetLocalBound();
@@ -20,11 +28,11 @@ public:
             g.DrawVeticalLine(i, top, bottom - top);
         }
         g.DrawRect(b);
-        if (cb == b)
-            finishing_ = true;
     }
 
     void PushSample(int16_t* sample, int len) {
+        if (samples_.size() == 0)
+            return;
         if (!finishing_)
             return;
 
@@ -49,6 +57,7 @@ public:
         finishing_ = true;
     }
 private:
+    TimerTask task_;
     std::vector<float> samples_;
     bool finishing_ = false;
     int current_index_ = 0;
