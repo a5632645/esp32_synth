@@ -60,11 +60,14 @@ struct Bound {
         return Bound{ x_ + dx, y_ + dy, w_, h_ };
     }
 
-    constexpr Bound WithCenter(int w, int h) {
-        return Bound{ x_ + w_ / 2 - w / 2, y_ + h_ / 2 - h / 2, w, h };
+    constexpr Bound WithCenter(int x, int y) {
+        auto c = GetCenter();
+        auto xoffset = x - c.x_;
+        auto yoffset = y - c.y_;
+        return Shift(xoffset, yoffset);
     }
 
-    constexpr Bound GetIntersection(Bound bound) {
+    constexpr Bound GetIntersection(Bound bound) const {
         auto b = GetIntersectionUncheck(bound);
         b.w_ = std::max(0, b.w_);
         b.h_ = std::max(0, b.h_);
@@ -74,7 +77,7 @@ struct Bound {
     /** @brief get intersection of two bounds without check
      *  @return intersection, w and h may be negative
      */
-    constexpr Bound GetIntersectionUncheck(Bound bound) {
+    constexpr Bound GetIntersectionUncheck(Bound bound) const {
         auto x = std::max(x_, bound.x_);
         auto y = std::max(y_, bound.y_);
         auto w = std::min(x_ + w_, bound.x_ + bound.w_) - x;

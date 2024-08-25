@@ -1,5 +1,8 @@
 #pragma once
 
+#include <stdint.h>
+#include "color.h"
+
 // some color type
 using MyRGB888 = struct {};
 using MyRGB565 = struct {};

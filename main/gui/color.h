@@ -5,13 +5,7 @@
 #endif
 
 #include <cstdint>
-
-enum MyColorEnums {
-    kMyColor_RGB888,
-    kMyColor_RGB565,
-    kMyColor_BGR565,
-    kMyColor_Mono
-};
+#include <stdlib.h>
 
 struct MyColor {
     uint8_t r;
@@ -28,18 +22,8 @@ struct MyColor {
         return MyColor((r * alpha) >> 8, (g * alpha) >> 8, (b * alpha) >> 8);
     }
 
-
-    constexpr uint16_t RGB565() const {
-        return ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);
-    }
-    constexpr uint16_t BGR565() const {
-        return ((b & 0xF8) << 8) | ((g & 0xFC) << 3) | (r >> 3);
-    }
-    constexpr uint32_t RGB888() const {
-        return ((r & 0xFF) << 16) | ((g & 0xFF) << 8) | (b & 0xFF);
-    }
-    constexpr uint8_t Mono() const {
-        return (r | g | b) == 0 ? 1 : 0;
+    inline static MyColor RandomOne() {
+        return MyColor(rand() % 256, rand() % 256, rand() % 256);
     }
 };
 

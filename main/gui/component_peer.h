@@ -13,10 +13,10 @@ class Component;
 
 class ComponentPeer {
 public:
-    ComponentPeer(MyDriver* context) : context_(context) {
+    ComponentPeer(MyDriver* driver) : driver_(driver) {
         invalid_rects_.reserve(16);
         invalid_rects_cache_.reserve(16);
-        buffer_bound_ = context->GetFrame()->GetBound();
+        buffer_bound_ = driver->GetFrame()->GetBound();
     }
 
     /**
@@ -52,10 +52,15 @@ public:
      * @note it's not thread safe
      */
     Component* GetComponent() const { return component_; }
+
+    void InvalidScreen() {
+        invalid_rects_cache_.clear();
+        invalid_rects_cache_.push_back(buffer_bound_);
+    }
 private:
     std::vector<Bound> invalid_rects_cache_;
     std::vector<Bound> invalid_rects_;
     Component* component_ = nullptr;
-    MyDriver* context_ = nullptr;
+    MyDriver* driver_ = nullptr;
     Bound buffer_bound_;
 };

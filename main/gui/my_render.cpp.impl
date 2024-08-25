@@ -1,4 +1,4 @@
-#include "../my_render.h"
+#include "my_render.h"
 #include "my_color_trait.h"
 
 #include <cmath>
@@ -8,12 +8,14 @@
 template<typename ColorTrait>
 class MyRender : public IMyRender {
 public:
-    using ColorStoreType = typename ColorTrait::StoreType;
-    inline static auto ColorTransform(MyColor c) {
+    using IMyRender::IMyRender;
+
+    using ColorStoreType = typename ColorTrait::type;
+    inline static ColorStoreType ColorTransform(MyColor c) {
         return ColorTrait::ColorTransform(c);
     }
-    inline static auto* GetXYPtr(int x, int y) {
-        return static_cast<ColorStoreType*>(frame_.buffer_) + y * frame_.w_ + x;
+    inline ColorStoreType* GetXYPtr(int x, int y) {
+        return (ColorStoreType*)frame_.buffer_ + y * frame_.w_ + x;
     }
 
     void DrawPixel(MyPoint p, MyColor c) override;
@@ -65,7 +67,7 @@ void MyRender<ColorTrait>::DrawLine(const LineReq& req) {
         if ( dx > dy ) {
             E = -dx;
             for (int i = 0; i <= dx; i++) {
-                if (req.aera.ContainPoint(x1, y1))
+                if (req.clip.ContainPoint(x1, y1))
                     *GetXYPtr(x1, y1) = c;
 
                 x1 += sx;
@@ -79,7 +81,7 @@ void MyRender<ColorTrait>::DrawLine(const LineReq& req) {
         else { /* inclination >= 1 */
             E = -dy;
             for (int i = 0 ; i <= dy ; i++ ) {
-                if (req.aera.ContainPoint(x1, y1))
+                if (req.clip.ContainPoint(x1, y1))
                     *GetXYPtr(x1, y1) = c;
                 
                 y1 += sy;
@@ -98,8 +100,8 @@ void MyRender<ColorTrait>::DrawVeticalline(const LineReq& req) {
     auto x = req.start.x_;
     auto y = std::min(req.start.y_, req.end.y_);
     auto y_end = std::max(req.start.y_, req.end.y_);
-    y = std::max(y, req.aera.y_);
-    y_end = std::min(y_end, req.aera.y_ + req.aera.h_ - 1);
+    y = std::max(y, req.clip.y_);
+    y_end = std::min(y_end, req.clip.y_ + req.clip.h_ - 1);
     auto c = ColorTransform(req.c);
     for (; y <= y_end; ++y) {
         *GetXYPtr(x, y) = c;
@@ -111,8 +113,8 @@ void MyRender<ColorTrait>::DrawHorizenLine(const LineReq& req) {
     auto y = req.start.y_;
     auto x = std::min(req.start.x_, req.end.x_);
     auto x_end = std::max(req.start.x_, req.end.x_);
-    x = std::max(x, req.aera.x_);
-    x_end = std::min(x_end, req.aera.x_ + req.aera.w_);
+    x = std::max(x, req.clip.x_);
+    x_end = std::min(x_end, req.clip.x_ + req.clip.w_);
     auto len = x_end - x;
     auto c = ColorTransform(req.c);
     std::fill_n(GetXYPtr(x, y), len, c);
@@ -120,25 +122,39 @@ void MyRender<ColorTrait>::DrawHorizenLine(const LineReq& req) {
 
 template <typename ColorTrait>
 void MyRender<ColorTrait>::FillRect(const RectReq& req) {
+    Bound aera = req.aera.GetIntersectionUncheck(req.clip);
+    if (!aera.IsValid())
+        return;
+
     auto c = ColorTransform(req.c);
-    for (int y = req.y_;
-         y < req.y_ + req.h_;
+    for (int y = aera.y_;
+         y < aera.y_ + aera.h_;
          ++y) {
-        std::fill_n(GetXYPtr(req.x_, y), req.w_, c);
+        std::fill_n(GetXYPtr(aera.x_, y), aera.w_, c);
     }
 }
 
 template <typename ColorTrait>
 void MyRender<ColorTrait>::DrawRect(const RectReq& req) {
     auto c = ColorTransform(req.c);
-    std::fill_n(GetXYPtr(req.aera.x_, req.aera.y_), req.aera.w_, c);
-    std::fill_n(GetXYPtr(req.aera.x_, req.aera.y_ + req.aera.h_ - 1), req.aera.w_, c);
-    for (int x = req.aera.x_;
-         x < req.aera.x_ + req.aera.w_;
-         ++x) {
-            *GetXYPtr(x, req.aera.y_) = c;
-            *GetXYPtr(x, req.aera.y_ + req.aera.h_ - 1) = c;
-    }
+
+    Bound b = req.aera.GetIntersectionUncheck(req.clip);
+    if (!b.IsValid())
+        return;
+
+    if (req.aera.y_ >= req.clip.y_ && req.aera.y_ < req.clip.y_ + req.clip.h_)
+        std::fill_n(GetXYPtr(b.x_, req.aera.y_), b.w_, c);
+    if (req.aera.y_ + req.aera.h_ <= req.clip.y_ + req.clip.h_ && 
+        req.aera.y_ + req.aera.h_ >= req.clip.y_)
+        std::fill_n(GetXYPtr(b.x_, req.aera.y_ + req.aera.h_ - 1), b.w_, c);
+
+    if (req.aera.x_ >= req.clip.x_ && req.aera.x_ < req.clip.x_ + req.clip.w_)
+        for (int yy = 0; yy < b.h_; ++yy)
+            *GetXYPtr(req.aera.x_, b.y_ + yy) = c;
+    if (req.aera.x_ + req.aera.w_ <= req.clip.x_ + req.clip.w_ && 
+        req.aera.x_ + req.aera.w_ >= req.clip.x_)
+        for (int yy = 0; yy < b.h_; ++yy)
+            *GetXYPtr(req.aera.x_ + req.aera.w_ - 1, b.y_ + yy) = c;
 }
 
 template <typename ColorTrait>
@@ -147,41 +163,45 @@ void MyRender<ColorTrait>::DrawText(const TextReq& req) {
         return;
     if (req.topleft.y_ + req.font.GetHeight() < req.aera.y_)
         return;
+    if (req.topleft.y_ >= req.aera.y_ + req.aera.h_)
+        return;
 
-    auto canvas_x = req.topleft.x_;
-    auto canvas_y = req.topleft.y_;
-    auto clip_left = req.aera.x_;
+    // 1. locate first character
+    auto locate_x = req.topleft.x_;
     size_t i = 0;
     for (; i < req.t.size(); ++i) {
-        auto text_right = canvas_x + font_.GetCharacterWidth(text[i]);
-        if (text_right >= clip_left)
+        auto text_right = locate_x + req.font.GetCharacterWidth(req.t[i]);
+        if (text_right >= req.aera.x_)
             break;
-        canvas_x = text_right;
+        locate_x = text_right;
     }
     if (i == req.t.size())
         return;
+    auto text = req.t.substr(i);
 
-    MyPoint topleft_offset{canvas_x - req.aera.x_, canvas_y - req.aera.y_};
+    // 2. get mask offset
+    auto mask_x_offset = locate_x < 0 ? -locate_x : 0;
+    auto mask_y_offset = req.topleft.y_ < req.aera.y_ ? req.aera.y_ - req.topleft.y_ : 0;
+    auto mask_y_height = std::min(req.topleft.y_ + req.font.GetHeight(), req.aera.y_ + req.aera.h_)
+                        -std::max(req.topleft.y_, req.aera.y_);
+    auto canvas_x = locate_x < 0 ? 0 : locate_x;
+    auto canvas_y = req.topleft.y_ < req.aera.y_ ? req.aera.y_ : req.topleft.y_;
+
+    // 3. draw
     auto c = ColorTransform(req.c);
     auto buffer_size = req.font.GetHeight() * req.font.GetMaxWidth();
-    uint8_t* mask = alloca(buffer_size * sizeof(uint8_t));
-
-    auto aera_bottom = req.aera.y_ + req.aera.h_;
+    uint8_t* mask = (uint8_t*)alloca(buffer_size * sizeof(uint8_t));
     auto aera_right = req.aera.x_ + req.aera.w_;
 
-    auto mask_y_offset = -req.topleft_offset.y_;
-    auto mask_y_height = std::min(req.aera.h_, req.font.GetHeight() + req.topleft_offset.y_);
-    auto mask_x_offset = -req.topleft_offset.x_;
-    auto canvas_x = req.aera.x_;
-    for (auto character : req.t) {
+    for (auto character : text) {
         if (canvas_x >= aera_right)
             break;
 
         auto chara_len = req.font.GetCharacterWidth(character);
-        auto fill_len = std::min(chara_len, aera_right - canvas_x);
+        auto fill_len = std::min(chara_len - mask_x_offset, aera_right - canvas_x);
         req.font.FillCharacter(character, mask);
         for (int yy = 0; yy < mask_y_height; ++yy) {
-            auto* canvas_ptr = GetXYPtr(canvas_x, req.aera.y_ + yy);
+            auto* canvas_ptr = GetXYPtr(canvas_x, canvas_y + yy);
             auto* mask_ptr = mask + (mask_y_offset + yy) * req.font.GetMaxWidth() + mask_x_offset;
             for (int xx = 0; xx < fill_len; ++xx) {
                 if (mask_ptr[xx] != 0)
@@ -196,11 +216,12 @@ void MyRender<ColorTrait>::DrawText(const TextReq& req) {
 
 template <typename ColorTrait>
 void MyRender<ColorTrait>::DrawPath(const PathReq& req) {
-    if (req.size < 2)
+    if (req.len < 2)
         return;
 
     LineReq lreq;
-    lreq.start = req.points[0];
+    lreq.start = req.pdata[0];
+    lreq.clip = req.clip;
     lreq.c = req.c;
     for (size_t i = 1; i < req.len; ++i) {
         lreq.end = req.pdata[i];
@@ -246,14 +267,14 @@ void MyRender<ColorTrait>::DrawEllipse(const EllipseReq& req) {
     b1 = 8 * b * b;
 
     do {
-        if (req.aera.ContainPoint(x1, y0))
-            GetXYPtr(x1, y0) = c;
-        if (req.aera.ContainPoint(x0, y0))
-            GetXYPtr(x0, y0) = c;
-        if (req.aera.ContainPoint(x0, y1))
-            GetXYPtr(x0, y1) = c;
-        if (req.aera.ContainPoint(x1, y1))
-            GetXYPtr(x1, y1) = c;
+        if (req.clip.ContainPoint(x1, y0))
+            *GetXYPtr(x1, y0) = c;
+        if (req.clip.ContainPoint(x0, y0))
+            *GetXYPtr(x0, y0) = c;
+        if (req.clip.ContainPoint(x0, y1))
+            *GetXYPtr(x0, y1) = c;
+        if (req.clip.ContainPoint(x1, y1))
+            *GetXYPtr(x1, y1) = c;
         e2 = 2 * err;
         if (e2 <= dy) {
             y0++;
@@ -268,14 +289,16 @@ void MyRender<ColorTrait>::DrawEllipse(const EllipseReq& req) {
     } while (x0 <= x1);
 
     while (y0 - y1 < b) {                         /* too early stop of flat ellipses a=1 */
-        if (req.aera.ContainPoint(x0 - 1, y0))
-            GetXYPtr(x0 - 1, y0) = c;
-        if (req.aera.ContainPoint(x1 + 1, y0))
-            GetXYPtr(x1 + 1, y0) = c;
-        if (req.aera.ContainPoint(x0 - 1, y1))
-            GetXYPtr(x0 - 1, y1) = c;
-        if (req.aera.ContainPoint(x1 + 1, y1))
-            GetXYPtr(x1 + 1, y1) = c;
+        if (req.clip.ContainPoint(x0 - 1, y0))
+            *GetXYPtr(x0 - 1, y0) = c;
+        if (req.clip.ContainPoint(x1 + 1, y0))
+            *GetXYPtr(x1 + 1, y0) = c;
+        ++y0;
+        if (req.clip.ContainPoint(x0 - 1, y1))
+            *GetXYPtr(x0 - 1, y1) = c;
+        if (req.clip.ContainPoint(x1 + 1, y1))
+            *GetXYPtr(x1 + 1, y1) = c;
+        --y1;
     }
 }
 
@@ -302,6 +325,7 @@ void MyRender<ColorTrait>::FillEllipse(const EllipseReq& req) {
 
         LineReq lq;
         lq.c = req.c;
+        lq.clip = req.clip;
         lq.start = {left, y + center.y_};
         lq.end = {right, y + center.y_};
         DrawHorizenLine(lq);
@@ -312,37 +336,39 @@ template <typename ColorTrait>
 void MyRender<ColorTrait>::MoveDrawContent(const MoveContentReq& req) {
     bool left = req.dx < 0;
     bool up = req.dy < 0;
+    auto xoffset = std::abs(req.dx);
+    auto yoffset = std::abs(req.dy);
     
     if (left) {
         for (int i = 0; i < req.aera.h_; ++i) {
             auto y = i + req.aera.y_;
-            std::copy_n(GetPtr(y, req.aera.x_ + offset),
-                        req.aera.w_ - offset,
-                        GetPtr(y, req.aera.x_));
+            std::copy_n(GetXYPtr(y, req.aera.x_ + xoffset),
+                        req.aera.w_ - xoffset,
+                        GetXYPtr(y, req.aera.x_));
         }
     }
     else {
         for (int i = 0; i < req.aera.h_; ++i) {
             auto y = i + req.aera.y_;
             auto x_src = req.aera.x_;
-            auto x_src_end = req.aera.x_ + req.aera.w_ - offset;
-            std::copy_backward(GetPtr(y, x_src),
-                               GetPtr(y, x_src_end),
-                               GetPtr(y, req.aera.w_ + req.aera.x_));
+            auto x_src_end = req.aera.x_ + req.aera.w_ - xoffset;
+            std::copy_backward(GetXYPtr(y, x_src),
+                               GetXYPtr(y, x_src_end),
+                               GetXYPtr(y, req.aera.w_ + req.aera.x_));
         }
     }
 
-    auto loop_count = req.aera.h_ - offset;
+    auto loop_count = req.aera.h_ - yoffset;
     if (up) {
         for (int i = 0; i < loop_count; ++i)
-            std::copy_n(GetPtr(req.aera.y_ + i + offset, req.aera.x_),
+            std::copy_n(GetXYPtr(req.aera.y_ + i + yoffset, req.aera.x_),
                         req.aera.w_,
-                        GetPtr(i + req.aera.y_, req.aera.x_));
+                        GetXYPtr(i + req.aera.y_, req.aera.x_));
     }
     else {
-        for (int y = req.aera.y_ + req.aera.h_ - 1; y >= req.aera.y_ + offset; --y)
-            std::copy_n(GetPtr(y - offset, req.aera.x_),
+        for (int y = req.aera.y_ + req.aera.h_ - 1; y >= req.aera.y_ + yoffset; --y)
+            std::copy_n(GetXYPtr(y - yoffset, req.aera.x_),
                         req.aera.w_,
-                        GetPtr(y, req.aera.x_));
+                        GetXYPtr(y, req.aera.x_));
     }
 }

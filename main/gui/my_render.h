@@ -5,59 +5,53 @@
 #include "bound.h"
 #include "my_font.h"
 
-enum class MyTextAlign {
-    kXLeft,
-    kXCenter,
-    kXRigh,
-    kYUp,
-    kYDown,
-    kYCenter
-};
+typedef enum {
+    kXLeft = 0b1,
+    kXCenter = 0b10,
+    kXRigh = 0b100,
+    kYUp = 0b1000,
+    kYDown = 0b10000,
+    kYCenter = 0b100000
+} MyTextAlign;
+typedef int MyTextAlignFlags;
 
 class IMyRender {
 public:
     virtual ~IMyRender() = default;
     IMyRender(MyFrame& f) : frame_(f) {}
-    void SetClipBound(const Bound& bound) {
-        clip_bound_ = bound;
-    }
 
     virtual void DrawPixel(MyPoint p, MyColor c) = 0;
 
     struct LineReq {
-        MyPoint start;
-        MyPoint end;
+        Bound clip;
         MyColor c;
+        MyPoint end;
+        MyPoint start;
     };
     virtual void DrawLine(const LineReq& req) = 0;
 
     struct RectReq {
         Bound aera;
+        Bound clip;
         MyColor c;
     };
     virtual void FillRect(const RectReq& req) = 0;
     virtual void DrawRect(const RectReq& req) = 0;
 
     struct TextReq {
+        Bound aera;
+        MyColor c;
         MyFont& font;
         std::string_view t;
-        MyPoint pos;
-        MyColor c;
+        MyPoint topleft;
     };
     virtual void DrawText(const TextReq& req) = 0;
 
-    struct AlignTextReq {
-        MyFont& font;
-        std::string_view t;
-        Bound aera;
-        MyColor c;
-    };
-    virtual void DrawTextAlign(const AlignTextReq& req) = 0;
-
     struct PathReq {
-        MyPoint* pdata;
-        size_t len;
         MyColor c;
+        Bound clip;
+        size_t len;
+        MyPoint* pdata;
     };
     virtual void DrawPath(const PathReq& req) = 0;
     virtual void FillPath(const PathReq& req) = 0;
@@ -69,6 +63,7 @@ public:
 
     struct EllipseReq {
         Bound aera;
+        Bound clip;
         MyColor c;
     };
     virtual void DrawEllipse(const EllipseReq& req) = 0;
@@ -81,6 +76,5 @@ public:
     };
     virtual void MoveDrawContent(const MoveContentReq& req) = 0;
 protected:
-    Bound clip_bound_;
     MyFrame& frame_;
 };

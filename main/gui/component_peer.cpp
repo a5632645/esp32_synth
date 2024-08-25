@@ -36,18 +36,18 @@ void ComponentPeer::FlushInvalidRects() {
         return;
     if (component_ == nullptr)
         return;
-    if (context_ == nullptr)
+    if (driver_ == nullptr)
         return;
 
     invalid_rects_cache_.swap(invalid_rects_);
-    MyGraphic g{context_->GetFrame()};
+    MyGraphic g{*driver_->GetFrame()};
     Bound dirty_aera = invalid_rects_.front();
     int left = dirty_aera.x_ + dirty_aera.w_;
     int bottom = dirty_aera.y_ + dirty_aera.h_;
-    context_->BeginFrame();
+    driver_->BeginFrame();
     for (auto& b : invalid_rects_) {
         component_->_Paint(g, b);
-        context_->AeraDrawed(b);
+        driver_->AeraDrawed(b);
 
         dirty_aera.x_ = std::min(dirty_aera.x_, b.x_);
         dirty_aera.y_ = std::min(dirty_aera.y_, b.y_);
@@ -56,7 +56,7 @@ void ComponentPeer::FlushInvalidRects() {
     }
     dirty_aera.w_ = left - dirty_aera.x_;
     dirty_aera.h_ = bottom - dirty_aera.y_;
-    context_->EndFrame(dirty_aera);
+    driver_->EndFrame(dirty_aera);
     invalid_rects_.clear();
 }
 

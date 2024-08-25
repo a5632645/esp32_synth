@@ -1,7 +1,7 @@
 #include "my_font.h"
 
 // https://github.com/dhepper/font8x8/blob/master/font8x8_basic.h
-static constexpr char font8x8_basic[128][8] = {
+static constexpr uint8_t font8x8_basic[128][8] = {
     { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},   // U+0000 (nul)
     { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},   // U+0001
     { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},   // U+0002
@@ -132,11 +132,15 @@ static constexpr char font8x8_basic[128][8] = {
     { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}    // U+007F
 };
 
-void MyFont::GetMask(char c, int offset_y, uint8_t* mask) const {
-    if ((uint8_t)c & 0x80)
+void MyFont::FillCharacter(char c, uint8_t* mask) const {
+    if ((uint8_t)c > 127)
         c = '?';
 
-    auto bitset = font8x8_basic[(uint8_t)c][offset_y];
-    for (int i = 0; i < 8; ++i)
-        mask[i] = bitset >> i & 0x1;
+    auto bitset = font8x8_basic[(uint8_t)c];
+    for (int row = 0; row < 8; ++row) {
+        auto* mask_row_ptr = mask + row * 8;
+        auto* bitset_row_ptr = bitset + row;
+        for (int i = 0; i < 8; ++i)
+            mask_row_ptr[i] = (*bitset_row_ptr >> i) & 0x1;
+    }
 }

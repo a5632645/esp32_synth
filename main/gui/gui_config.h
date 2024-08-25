@@ -4,11 +4,10 @@
 #error only c++ support
 #endif
 
+#if 0
+
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
-
-#define OPTION_TIMER_QUEUE_LOCK 1
-
 // if need task/thread sync, need implment these
 struct MyLock {
     SemaphoreHandle_t mutex;
@@ -62,3 +61,56 @@ struct MyScopeLock {
 
     MyLock& lock_;
 };
+
+#else
+
+struct MyLock {
+    bool mutex{false};
+
+    MyLock() = default;
+
+    void Lock() {
+        while (mutex) {}
+        mutex = true;
+    }
+
+    void Unlock() {
+        mutex = false;
+    }
+};
+
+struct MyNotify {
+    bool sem{false};
+
+    MyNotify() = default;
+
+    void Wait() {
+        while (!sem) {}
+    }
+
+    void Notify() {
+        sem = true;
+    }
+};
+
+struct MyScopeLock {
+    MyScopeLock(MyLock& lock) : lock_(lock) {
+        lock_.Lock();
+    }
+
+    ~MyScopeLock() {
+        lock_.Unlock();
+    }
+
+    void Lock() {
+        lock_.Lock();
+    }
+
+    void Unlock() {
+        lock_.Unlock();
+    }
+
+    MyLock& lock_;
+};
+
+#endif

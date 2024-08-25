@@ -5,6 +5,7 @@
 #endif
 
 #include <string_view>
+#include <stdint.h>
 
 class MyFont {
 public:
@@ -18,9 +19,17 @@ public:
         return 8;
     }
 
-    int GetWidth(std::string_view text) const {
-        return static_cast<int>(text.size()) * 8;
+    int GetMaxWidth() const {
+        return 8;
     }
-    
-    void GetMask(char c, int offset_y, uint8_t* mask) const;
+
+    int GetCharacterWidth(char c) const {
+        return 8;
+    }
+
+    void FillCharacter(char c, uint8_t* mask) const;
+
+    int GetTextWidth(std::string_view text) const {
+        return 8 * text.size();
+    }
 };
